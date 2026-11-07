@@ -1,0 +1,8 @@
+# EXCLUSIVEMENT avec un projet de recette distinct et compose.test.yaml sur base vide.
+# Aucun appel ni secret Mistral réel : le mock intercepte uniquement l’URL officielle.
+services:
+  cms:
+    environment:
+      RUN_ASSISTANT_TESTS: 'true'
+      MISTRAL_API_KEY: mistral-test-key
+      NODE_OPTIONS: --require /app/tests/mock-mistral.cjs

@@ -1,0 +1,25 @@
+{
+  "name": "vertical-cotiere-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev --host 0.0.0.0",
+    "build": "nuxt build",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "nuxt typecheck",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "@types/sanitize-html": "^2.16.2",
+    "nuxt": "4.6.4",
+    "sanitize-html": "^2.18.1",
+    "vue": "^3.5.0",
+    "vue-router": "^5.4.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^24.19.2",
+    "typescript": "^5.9.0",
+    "vue-tsc": "^3.1.0"
+  }
+}

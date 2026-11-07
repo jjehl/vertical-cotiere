@@ -1,0 +1,278 @@
+{
+  "season": "2026–2027",
+  "sessions": [
+    {
+      "day": 1,
+      "label": "Lundi 1",
+      "start": "17:30",
+      "end": "19:00",
+      "audience": "CE2 à CM2",
+      "birthYears": "2016–2018",
+      "capacity": 14,
+      "supervised": true
+    },
+    {
+      "day": 1,
+      "label": "Lundi 2",
+      "start": "19:00",
+      "end": "21:00",
+      "audience": "Collège",
+      "birthYears": "2012–2015",
+      "capacity": 14,
+      "supervised": true
+    },
+    {
+      "day": 1,
+      "label": "Adultes",
+      "start": "21:00",
+      "end": "22:30",
+      "audience": "Adultes",
+      "birthYears": "",
+      "capacity": null,
+      "supervised": false
+    },
+    {
+      "day": 2,
+      "label": "Mardi 1",
+      "start": "17:30",
+      "end": "19:00",
+      "audience": "Collège",
+      "birthYears": "2012–2015",
+      "capacity": 14,
+      "supervised": true
+    },
+    {
+      "day": 2,
+      "label": "Mardi 2",
+      "start": "19:00",
+      "end": "21:00",
+      "audience": "Groupe compétition",
+      "birthYears": "",
+      "capacity": null,
+      "supervised": true
+    },
+    {
+      "day": 3,
+      "label": "Mercredi 0",
+      "start": "14:00",
+      "end": "15:00",
+      "audience": "CP à CE1",
+      "birthYears": "2019–2020",
+      "capacity": 12,
+      "supervised": true
+    },
+    {
+      "day": 3,
+      "label": "Mercredi 1",
+      "start": "15:00",
+      "end": "16:00",
+      "audience": "CP à CE1",
+      "birthYears": "2019–2020",
+      "capacity": 12,
+      "supervised": true
+    },
+    {
+      "day": 3,
+      "label": "Mercredi 2",
+      "start": "16:00",
+      "end": "17:00",
+      "audience": "Maternelle MS à GS",
+      "birthYears": "2021–2022",
+      "capacity": 10,
+      "supervised": true
+    },
+    {
+      "day": 3,
+      "label": "Mercredi 3",
+      "start": "17:00",
+      "end": "18:00",
+      "audience": "Maternelle MS à GS",
+      "birthYears": "2021–2022",
+      "capacity": 10,
+      "supervised": true
+    },
+    {
+      "day": 3,
+      "label": "Mercredi 4",
+      "start": "18:00",
+      "end": "19:00",
+      "audience": "CE2 à CM2",
+      "birthYears": "2016–2018",
+      "capacity": 14,
+      "supervised": true
+    },
+    {
+      "day": 3,
+      "label": "Mercredi 5",
+      "start": "19:00",
+      "end": "20:30",
+      "audience": "Collège",
+      "birthYears": "2012–2015",
+      "capacity": 14,
+      "supervised": true
+    },
+    {
+      "day": 3,
+      "label": "Mercredi adultes",
+      "start": "20:30",
+      "end": "22:30",
+      "audience": "Adultes",
+      "birthYears": "",
+      "capacity": 20,
+      "supervised": true
+    },
+    {
+      "day": 4,
+      "label": "Jeudi 1",
+      "start": "17:30",
+      "end": "19:00",
+      "audience": "CE2 à CM2",
+      "birthYears": "2016–2018",
+      "capacity": 14,
+      "supervised": true
+    },
+    {
+      "day": 4,
+      "label": "Jeudi 2",
+      "start": "19:00",
+      "end": "21:00",
+      "audience": "Lycée",
+      "birthYears": "2009–2011",
+      "capacity": 14,
+      "supervised": true
+    },
+    {
+      "day": 4,
+      "label": "Adultes",
+      "start": "21:00",
+      "end": "22:30",
+      "audience": "Adultes",
+      "birthYears": "",
+      "capacity": null,
+      "supervised": true
+    },
+    {
+      "day": 5,
+      "label": "Vendredi 1",
+      "start": "17:30",
+      "end": "19:00",
+      "audience": "Collège",
+      "birthYears": "2012–2015",
+      "capacity": 14,
+      "supervised": true
+    },
+    {
+      "day": 5,
+      "label": "Vendredi 2",
+      "start": "19:00",
+      "end": "21:00",
+      "audience": "Lycée",
+      "birthYears": "2009–2011",
+      "capacity": 14,
+      "supervised": true
+    },
+    {
+      "day": 5,
+      "label": "Adultes",
+      "start": "21:00",
+      "end": "22:30",
+      "audience": "Adultes",
+      "birthYears": "",
+      "capacity": 20,
+      "supervised": true
+    },
+    {
+      "day": 6,
+      "label": "Samedi 1",
+      "start": "09:00",
+      "end": "10:00",
+      "audience": "CP à CE1",
+      "birthYears": "2019–2020",
+      "capacity": 12,
+      "supervised": true
+    },
+    {
+      "day": 6,
+      "label": "Samedi 2",
+      "start": "10:00",
+      "end": "11:00",
+      "audience": "CP à CE1",
+      "birthYears": "2019–2020",
+      "capacity": 12,
+      "supervised": true
+    },
+    {
+      "day": 6,
+      "label": "Samedi 3",
+      "start": "11:00",
+      "end": "12:00",
+      "audience": "Maternelle MS à GS",
+      "birthYears": "2021–2022",
+      "capacity": 10,
+      "supervised": true
+    },
+    {
+      "day": 6,
+      "label": "Samedi 4",
+      "start": "13:00",
+      "end": "14:30",
+      "audience": "Primaire",
+      "birthYears": "2016–2020",
+      "capacity": 12,
+      "supervised": true
+    },
+    {
+      "day": 6,
+      "label": "Samedi 5",
+      "start": "14:30",
+      "end": "16:00",
+      "audience": "CE2 à CM2",
+      "birthYears": "2016–2018",
+      "capacity": 14,
+      "supervised": true
+    }
+  ],
+  "ufraps": {
+    "opens": "2026-09-14",
+    "closes": "2027-06-13",
+    "day": 6,
+    "start": "10:00",
+    "end": "12:00",
+    "closures": [
+      {
+        "label": "Toussaint",
+        "lastDay": "2026-10-25",
+        "reopens": "2026-11-02"
+      },
+      {
+        "label": "Noël",
+        "lastDay": "2026-12-20",
+        "reopens": "2027-01-04"
+      },
+      {
+        "label": "Hiver",
+        "lastDay": "2027-02-21",
+        "reopens": "2027-03-01"
+      },
+      {
+        "label": "Printemps",
+        "lastDay": "2027-04-18",
+        "reopens": "2027-04-26"
+      }
+    ],
+    "holidays": [
+      "2026-11-01",
+      "2026-11-11",
+      "2026-12-25",
+      "2027-01-01",
+      "2027-03-29",
+      "2027-05-01",
+      "2027-05-06",
+      "2027-05-07",
+      "2027-05-08",
+      "2027-05-09",
+      "2027-05-17"
+    ]
+  },
+  "note": "Transcription du planning publié. Le libellé « Mercredi 5 » est répété sur l’image pour les adultes ; il est explicité ici. Les horaires HelloAsso restent la référence lors de l’inscription."
+}

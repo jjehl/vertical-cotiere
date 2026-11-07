@@ -1,0 +1,20 @@
+{
+  "collectionName": "components_schedule_closure",
+  "info": {
+    "displayName": "Fermeture sur une période"
+  },
+  "attributes": {
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "from": {
+      "type": "date",
+      "required": true
+    },
+    "until": {
+      "type": "date",
+      "required": true
+    }
+  }
+}

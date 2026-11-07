@@ -1,0 +1,16 @@
+{
+  "collectionName": "components_schedule_closed_day",
+  "info": {
+    "displayName": "Fermeture exceptionnelle"
+  },
+  "attributes": {
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "date": {
+      "type": "date",
+      "required": true
+    }
+  }
+}

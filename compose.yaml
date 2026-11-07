@@ -1,0 +1,91 @@
+name: vertical-cotiere
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: vertical
+      POSTGRES_USER: vertical
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Exécuter node scripts/init-env.mjs}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U vertical -d vertical']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  cms:
+    build:
+      context: .
+      dockerfile: cms/Dockerfile
+      target: development
+    init: true
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:1337/_health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      start_period: 120s
+      retries: 30
+    environment:
+      NODE_ENV: development
+      DATABASE_HOST: db
+      DATABASE_NAME: vertical
+      DATABASE_USERNAME: vertical
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Mot de passe requis}
+      APP_KEYS: ${APP_KEYS:?Clés requises}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:?Secret requis}
+      API_TOKEN_SALT: ${API_TOKEN_SALT:?Secret requis}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT:?Secret requis}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Secret requis}
+      JWT_SECRET: ${JWT_SECRET:?Secret requis}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-ministral-8b-2512}
+      SEED_CONTENT: 'true'
+      IMPORT_MEDIA: 'true'
+      PUBLIC_CMS_URL: http://localhost:${CMS_PORT:-1337}
+    ports:
+      - '127.0.0.1:${CMS_PORT:-1337}:1337'
+    volumes:
+      - ./cms/src:/app/src
+      - ./cms/tests:/app/tests:ro
+      - ./cms/config:/app/config
+      - ./content:/app/content:ro
+      - uploads:/app/public/uploads
+      - ./frontend/public/gallery:/app/legacy-gallery:ro
+      - ./frontend/public/imports:/app/legacy-imports:ro
+      - ./frontend/public/images:/app/legacy-images:ro
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: development
+    init: true
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      start_period: 30s
+      retries: 20
+    environment:
+      NUXT_CMS_URL: http://cms:1337
+    ports:
+      - '127.0.0.1:${WEB_PORT:-3000}:3000'
+    volumes:
+      - ./frontend/app:/app/app
+      - ./frontend/server:/app/server
+      - ./frontend/shared:/app/shared
+      - ./frontend/public/images:/app/public/images:ro
+      - ./frontend/public/favicon.svg:/app/public/favicon.svg:ro
+      - ./frontend/e2e:/app/e2e:ro
+      - ./frontend/playwright.config.ts:/app/playwright.config.ts:ro
+      - ./frontend/tests:/app/tests:ro
+      - ./frontend/nuxt.config.ts:/app/nuxt.config.ts:ro
+      - ./content:/content:ro
+    depends_on:
+      cms:
+        condition: service_healthy
+volumes:
+  postgres_data:
+  uploads:

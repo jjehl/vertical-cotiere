@@ -1,0 +1,130 @@
+{
+  "kind": "collectionType",
+  "collectionName": "events",
+  "info": {
+    "singularName": "event",
+    "pluralName": "events",
+    "displayName": "Événement"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": [
+        "Cours",
+        "Compétition",
+        "Sortie",
+        "Stage",
+        "Vie du club"
+      ],
+      "required": true
+    },
+    "summary": {
+      "type": "text"
+    },
+    "body": {
+      "type": "text"
+    },
+    "start": {
+      "type": "datetime",
+      "required": true
+    },
+    "end": {
+      "type": "datetime",
+      "required": true
+    },
+    "location": {
+      "type": "string"
+    },
+    "participationUrl": {
+      "type": "string"
+    },
+    "participationLabel": {
+      "type": "string"
+    },
+    "deadline": {
+      "type": "datetime"
+    },
+    "eventState": {
+      "type": "enumeration",
+      "enum": [
+        "prévu",
+        "complet",
+        "annulé",
+        "reporté"
+      ],
+      "default": "prévu"
+    },
+    "image": {
+      "type": "string",
+      "private": true,
+      "pluginOptions": {
+        "content-manager": {
+          "visible": false
+        },
+        "content-type-builder": {
+          "visible": false
+        }
+      }
+    },
+    "bodyHtml": {
+      "type": "text"
+    },
+    "sourceId": {
+      "type": "string"
+    },
+    "oldPath": {
+      "type": "string"
+    },
+    "allDay": {
+      "type": "boolean",
+      "default": false
+    },
+    "startDate": {
+      "type": "date"
+    },
+    "endDate": {
+      "type": "date"
+    },
+    "tags": {
+      "type": "json"
+    },
+    "calendarUid": {
+      "type": "string"
+    },
+    "coverImage": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "images"
+      ]
+    },
+    "attachments": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": [
+        "images",
+        "files"
+      ]
+    }
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": false
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  }
+}

@@ -1,0 +1,9 @@
+# À combiner avec compose.yaml sous un nom de projet distinct, sur une base vide.
+services:
+  cms:
+    ports: !override []
+    volumes:
+      - ${TEST_GALLERY_DIRECTORY:?Créer les images de recette}:/app/legacy-gallery:ro
+  web:
+    ports: !override
+      - '127.0.0.1:${TEST_WEB_PORT:-3100}:3000'

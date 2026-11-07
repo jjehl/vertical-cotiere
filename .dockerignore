@@ -1,0 +1,17 @@
+**/node_modules
+**/.nuxt
+**/.output
+**/dist
+**/build
+**/.cache
+**/.strapi
+**/__pycache__
+**/.env
+**/.env.*
+.git
+cms/public/uploads/*
+test-results
+playwright-report
+frontend/public/gallery
+
+.tmp

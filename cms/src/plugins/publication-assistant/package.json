@@ -1,0 +1,10 @@
+{
+  "name": "publication-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "strapi": { "name": "publication-assistant", "kind": "plugin", "displayName": "Assistant de publication" },
+  "exports": {
+    "./strapi-server": "./server/index.js",
+    "./strapi-admin": { "import": "./admin/index.jsx", "default": "./admin/index.jsx" }
+  }
+}

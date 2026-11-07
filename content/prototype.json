@@ -1,0 +1,85 @@
+{
+  "activities": [
+    {
+      "slug": "competition",
+      "title": "Le goût du défi.",
+      "eyebrow": "Compétition",
+      "summary": "Se dépasser, vibrer ensemble et porter les couleurs du club. Du premier contest à la Coupe de l’Ain.",
+      "body": "La compétition est une autre façon de vivre l’escalade : apprendre à gérer son effort, essayer de nouveaux mouvements et encourager les autres.\n\nVertical Côtière participe notamment à la Coupe de l’Ain. Le club propose une équipe compétition pour les enfants, les adolescents et les adultes, avec un créneau supplémentaire pour les plus motivés.\n\nL’accès au groupe compétition est validé par les entraîneurs. Contactez le secrétariat pour connaître les modalités de la saison et les prochaines échéances.",
+      "image": "/images/competition.jpg",
+      "audience": "Jeunes & adultes",
+      "tag": "Se dépasser",
+      "order": 1
+    },
+    {
+      "slug": "sorties-nature",
+      "title": "L’appel du dehors.",
+      "eyebrow": "Sorties nature",
+      "summary": "Du rocher, du grand air et des moments à partager. La grimpe prend une autre dimension en pleine nature.",
+      "body": "Sortir du gymnase, découvrir la falaise et partager une journée au grand air : les sorties font partie de la vie du club.\n\nLe programme peut comprendre des journées en falaise, un séjour dans les Calanques pour les adultes autonomes, des sorties de ski de randonnée et un camp d’été pour les jeunes.\n\nChaque sortie précise son public, ses prérequis et ses modalités de participation. Consultez la fiche et contactez les organisateurs avant de vous inscrire en cas de doute.",
+      "image": "/images/nature.jpg",
+      "audience": "Selon la sortie & l’autonomie",
+      "tag": "Explorer",
+      "order": 2
+    },
+    {
+      "slug": "cours-escalade",
+      "title": "À chacun sa voie.",
+      "eyebrow": "Cours & progression",
+      "summary": "Découvrir les premières prises ou affiner sa technique. Des cours pour apprendre, progresser et prendre confiance.",
+      "body": "Au gymnase du collège Louis Armstrong à Beynost, le club propose des cours d’initiation et de perfectionnement à partir de 4 ans.\n\nLes séances associent pratique de l’escalade et apprentissage des méthodes de sécurité, pour progresser vers l’autonomie. Les créneaux sont répartis selon les publics et les niveaux.\n\nPour les plus petits, le baby escalade accueille les enfants de 2 à 4 ans avec un parent, lors de séances ponctuelles. Les stages de vacances complètent les cours de la saison.\n\nConsultez les modalités d’inscription et les horaires de la campagne HelloAsso avant de choisir un créneau.",
+      "image": "/images/cours.jpg",
+      "audience": "Dès 4 ans · baby 2–4 ans",
+      "tag": "Progresser",
+      "order": 3
+    }
+  ],
+  "events": [
+    {
+      "slug": "baby-escalade-14-novembre-2026",
+      "title": "Baby escalade",
+      "category": "Cours",
+      "summary": "Une découverte de la verticalité pour les enfants de 2 à 4 ans, avec un parent.",
+      "body": "Une séance pour découvrir l’escalade à son rythme, avec la présence d’un parent.\n\nLa plage horaire indiquée correspond à l’événement publié sur le site du club. Vérifiez votre créneau et les places disponibles auprès du secrétariat avant de venir.",
+      "start": "2026-11-14T15:00:00.000Z",
+      "end": "2026-11-14T17:30:00.000Z",
+      "location": "Gymnase Louis Armstrong · Beynost",
+      "participationUrl": "mailto:secretariat@vertical-cotiere.fr",
+      "participationLabel": "Contacter le secrétariat",
+      "eventState": "prévu",
+      "image": "/images/cours.jpg"
+    }
+  ],
+  "news": [
+    {
+      "slug": "saison-2026-2027",
+      "title": "Une nouvelle saison à partager.",
+      "category": "Vie du club",
+      "summary": "Cours, entraînements et sorties : retrouvez les modalités de la saison 2026–2027 et les liens d’inscription.",
+      "body": "La saison 2026–2027 est lancée. Les inscriptions au club se font sur HelloAsso.\n\nPrenez le temps de consulter les consignes et les horaires de la campagne avant de valider votre inscription. Les modalités de réductions, de remboursements et de location de chaussons sont détaillées sur la page d’inscription du site actuel.\n\nPour toute question concernant votre situation, écrivez au secrétariat avant de payer.",
+      "date": "2026-09-01",
+      "image": "/images/cours.jpg",
+      "sourceUrl": "https://www.vertical-cotiere.fr/inscriptions_25-26/"
+    },
+    {
+      "slug": "sortie-crept-septembre-2026",
+      "title": "Une journée au rocher de Crept.",
+      "category": "Sorties nature",
+      "summary": "Le club proposait une journée falaise le 20 septembre, pour les grimpeurs autonomes.",
+      "body": "Une sortie à Crept était proposée le dimanche 20 septembre 2026 aux adultes, lycéens et collégiens autonomes.\n\nL’organisation passait par un sondage Framadate pour préparer la participation. Cet article reprend l’annonce d’origine ; il ne constitue pas un compte rendu de la sortie.",
+      "date": "2026-09-12",
+      "image": "/images/nature.jpg",
+      "sourceUrl": "https://www.vertical-cotiere.fr/sortie-crept-20-09-26/"
+    },
+    {
+      "slug": "reglement-interieur",
+      "title": "Les bons repères pour grimper ensemble.",
+      "category": "Association",
+      "summary": "Le règlement intérieur fait partie des documents à consulter pour la vie au club.",
+      "body": "Le site actuel annonce une mise à jour du règlement intérieur à la suite de l’assemblée générale d’octobre.\n\nRetrouvez le document en vigueur sur le site du club. Les documents réglementaires seront repris et validés avant la mise en ligne de cette nouvelle version.",
+      "date": "2026-10-01",
+      "image": "/images/competition.jpg",
+      "sourceUrl": "https://www.vertical-cotiere.fr/"
+    }
+  ]
+}

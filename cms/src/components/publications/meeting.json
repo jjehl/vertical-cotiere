@@ -1,0 +1,59 @@
+{
+  "collectionName": "components_publications_meetings",
+  "info": {
+    "displayName": "Rendez-vous dans l’agenda"
+  },
+  "attributes": {
+    "start": {
+      "type": "datetime",
+      "required": true
+    },
+    "end": {
+      "type": "datetime"
+    },
+    "location": {
+      "type": "string"
+    },
+    "participationUrl": {
+      "type": "string"
+    },
+    "participationLabel": {
+      "type": "string"
+    },
+    "deadline": {
+      "type": "datetime"
+    },
+    "eventState": {
+      "type": "enumeration",
+      "enum": [
+        "prévu",
+        "complet",
+        "annulé",
+        "reporté"
+      ],
+      "default": "prévu"
+    },
+    "allDay": {
+      "type": "boolean",
+      "default": false
+    },
+    "tags": {
+      "type": "json",
+      "private": true,
+      "pluginOptions": {
+        "content-manager": {
+          "visible": false
+        }
+      }
+    },
+    "calendarUid": {
+      "type": "string",
+      "private": true,
+      "pluginOptions": {
+        "content-manager": {
+          "visible": false
+        }
+      }
+    }
+  }
+}

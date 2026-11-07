@@ -1,0 +1,69 @@
+{
+  "kind": "collectionType",
+  "collectionName": "club_documents",
+  "info": {
+    "singularName": "club-document",
+    "pluralName": "club-documents",
+    "displayName": "Document du club"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": [
+        "Vie du club",
+        "Sécurité",
+        "Compétitions",
+        "Archives",
+        "Autres"
+      ],
+      "default": "Autres"
+    },
+    "description": {
+      "type": "text"
+    },
+    "file": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": [
+        "files"
+      ],
+      "required": true
+    },
+    "legacyPath": {
+      "type": "string",
+      "private": true,
+      "pluginOptions": {
+        "content-manager": {
+          "visible": false
+        },
+        "content-type-builder": {
+          "visible": false
+        }
+      }
+    },
+    "pages": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::page.page",
+      "mappedBy": "documents",
+      "private": true,
+      "pluginOptions": {
+        "content-manager": {
+          "visible": false
+        }
+      }
+    }
+  }
+}

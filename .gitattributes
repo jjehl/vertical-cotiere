@@ -1,0 +1,2 @@
+# Preserve imported PDF documents as binary files, including ASCII-only PDFs.
+*.pdf binary

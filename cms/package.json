@@ -1,0 +1,29 @@
+{
+  "name": "vertical-cotiere-cms",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "develop": "strapi develop",
+    "build": "strapi build",
+    "start": "strapi start",
+    "strapi": "strapi"
+  },
+  "dependencies": {
+    "@strapi/plugin-users-permissions": "5.61.0",
+    "@strapi/strapi": "5.61.0",
+    "@strapi/utils": "^5.61.0",
+    "mime-types": "^2.1.35",
+    "pg": "^8.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.0",
+    "sharp": "^0.35.5",
+    "styled-components": "^6.1.0"
+  },
+  "engines": {
+    "node": ">=22 <=26"
+  },
+  "strapi": {
+    "uuid": "bc2e6140-364c-4a26-bf8b-58fe5d065892"
+  }
+}

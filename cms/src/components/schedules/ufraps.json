@@ -1,0 +1,48 @@
+{
+  "collectionName": "components_schedule_ufraps",
+  "info": {
+    "displayName": "Calendrier UFRAPS"
+  },
+  "attributes": {
+    "opens": {
+      "type": "date",
+      "required": true
+    },
+    "closes": {
+      "type": "date",
+      "required": true
+    },
+    "day": {
+      "type": "enumeration",
+      "enum": [
+        "Lundi",
+        "Mardi",
+        "Mercredi",
+        "Jeudi",
+        "Vendredi",
+        "Samedi",
+        "Dimanche"
+      ],
+      "default": "Samedi",
+      "required": true
+    },
+    "start": {
+      "type": "time",
+      "required": true
+    },
+    "end": {
+      "type": "time",
+      "required": true
+    },
+    "closures": {
+      "type": "component",
+      "repeatable": true,
+      "component": "schedules.closure"
+    },
+    "closedDays": {
+      "type": "component",
+      "repeatable": true,
+      "component": "schedules.closed-day"
+    }
+  }
+}

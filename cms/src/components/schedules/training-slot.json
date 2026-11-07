@@ -1,0 +1,48 @@
+{
+  "collectionName": "components_schedule_training_slot",
+  "info": {
+    "displayName": "Créneau de cours"
+  },
+  "attributes": {
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "day": {
+      "type": "enumeration",
+      "enum": [
+        "Lundi",
+        "Mardi",
+        "Mercredi",
+        "Jeudi",
+        "Vendredi",
+        "Samedi",
+        "Dimanche"
+      ],
+      "required": true
+    },
+    "start": {
+      "type": "time",
+      "required": true
+    },
+    "end": {
+      "type": "time",
+      "required": true
+    },
+    "audience": {
+      "type": "string",
+      "required": true
+    },
+    "birthYears": {
+      "type": "string"
+    },
+    "capacity": {
+      "type": "integer",
+      "min": 1
+    },
+    "supervised": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

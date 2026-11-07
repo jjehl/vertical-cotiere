@@ -1,0 +1,40 @@
+{
+  "kind": "singleType",
+  "collectionName": "club_timetables",
+  "info": {
+    "singularName": "club-timetable",
+    "pluralName": "club-timetables",
+    "displayName": "Horaires et UFRAPS"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "season": {
+      "type": "string",
+      "required": true
+    },
+    "note": {
+      "type": "text"
+    },
+    "sessions": {
+      "type": "component",
+      "repeatable": true,
+      "component": "schedules.training-slot"
+    },
+    "ufraps": {
+      "type": "component",
+      "repeatable": false,
+      "component": "schedules.ufraps",
+      "required": true
+    },
+    "attachments": {
+      "type": "media",
+      "multiple": true,
+      "allowedTypes": [
+        "images",
+        "files"
+      ]
+    }
+  }
+}

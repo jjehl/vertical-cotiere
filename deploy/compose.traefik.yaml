@@ -1,0 +1,28 @@
+# Optionnel : Traefik doit déjà exister sur le serveur et gérer le resolver indiqué.
+services:
+  web:
+    networks:
+      - default
+      - proxy
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: ${TRAEFIK_NETWORK:-traefik}
+      traefik.http.services.vertical-web.loadbalancer.server.port: '3000'
+      traefik.http.routers.vertical-http.rule: Host(`${SITE_DOMAIN:?Domaine requis}`)
+      traefik.http.routers.vertical-http.entrypoints: web
+      traefik.http.routers.vertical-http.middlewares: vertical-https
+      traefik.http.middlewares.vertical-https.redirectscheme.scheme: https
+      traefik.http.routers.vertical.rule: Host(`${SITE_DOMAIN:?Domaine requis}`)
+      traefik.http.routers.vertical.entrypoints: websecure
+      traefik.http.routers.vertical.tls: 'true'
+      traefik.http.routers.vertical.tls.certresolver: ${TRAEFIK_CERT_RESOLVER:-myresolver}
+  cms:
+    labels:
+      traefik.enable: 'false'
+  db:
+    labels:
+      traefik.enable: 'false'
+networks:
+  proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik}

@@ -1,0 +1,59 @@
+name: vertical-cotiere-prod
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vertical
+      POSTGRES_USER: vertical
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?Mot de passe requis}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U vertical -d vertical']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  cms:
+    image: ${IMAGE_PREFIX:?Ex. ghcr.io/jjehl/vertical-cotiere}-cms:${IMAGE_TAG:?Tag immuable requis}
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: db
+      DATABASE_NAME: vertical
+      DATABASE_USERNAME: vertical
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?Mot de passe requis}
+      APP_KEYS: ${APP_KEYS:?Clés requises}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET:?Secret requis}
+      API_TOKEN_SALT: ${API_TOKEN_SALT:?Secret requis}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT:?Secret requis}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Secret requis}
+      JWT_SECRET: ${JWT_SECRET:?Secret requis}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-ministral-8b-2512}
+      PUBLIC_CMS_URL: ${PUBLIC_CMS_URL:-http://localhost:1337}
+      SEED_CONTENT: ${SEED_CONTENT:-false}
+      IMPORT_MEDIA: ${IMPORT_MEDIA:-false}
+    ports:
+      - '127.0.0.1:1337:1337'
+    volumes:
+      - uploads:/app/public/uploads
+      - ${GALLERY_DIRECTORY:-./gallery}:/app/legacy-gallery:ro
+    depends_on:
+      db:
+        condition: service_healthy
+  web:
+    image: ${IMAGE_PREFIX:?Préfixe requis}-web:${IMAGE_TAG:?Tag requis}
+    restart: unless-stopped
+    init: true
+    environment:
+      NUXT_CMS_URL: http://cms:1337
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      cms:
+        condition: service_healthy
+volumes:
+  postgres_data:
+  uploads:

@@ -20,7 +20,7 @@ jobs:
       revision: ${{ steps.plan.outputs.revision }}
       publish: ${{ steps.plan.outputs.publish }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Déterminer la version et vérifier la release
@@ -33,8 +33,8 @@ jobs:
       TEST_GALLERY_DIRECTORY: ${{ github.workspace }}/.tmp/ci-gallery
       BASE_URL: http://127.0.0.1:3100
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - name: Vérifier le playbook Ansible sans connexion OVH
@@ -43,7 +43,7 @@ jobs:
           ansible-playbook -i localhost, deploy/ansible/deploy.yml --syntax-check
       - name: Vérifier le déploiement des secrets (sans connexion OVH)
         run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -89,14 +89,14 @@ jobs:
       web_digest: ${{ steps.web.outputs.digest }}
       cms_digest: ${{ steps.cms.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
       - name: Préfixe d’image en minuscules
         id: image
         env:
           REPOSITORY: ${{ github.repository }}
         run: echo "name=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         if: needs.plan.outputs.publish == 'true'
         with:
           registry: ghcr.io
@@ -104,7 +104,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Construire le frontend
         id: web
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: frontend/Dockerfile
@@ -120,7 +120,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=web
       - name: Construire le CMS
         id: cms
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: cms/Dockerfile
@@ -144,12 +144,12 @@ jobs:
       group: vertical-deploy-${{ needs.plan.outputs.environment }}
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - name: Écarter une ancienne recette si main a avancé
         id: latest
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           DEPLOY_ENVIRONMENT: ${{ needs.plan.outputs.environment }}
           DEPLOY_REVISION: ${{ needs.plan.outputs.revision }}
@@ -161,7 +161,7 @@ jobs:
               const ref = await github.rest.git.getRef({...context.repo, ref: 'heads/main'});
               core.setOutput('deploy', String(ref.data.object.sha === process.env.DEPLOY_REVISION));
             }
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         if: steps.latest.outputs.deploy == 'true'
         with:
           python-version: '3.12'

@@ -25,11 +25,12 @@ déploiement est **manuel**. Aucun secret du projet de référence n’a été r
 Depuis la racine, avec Docker Compose v2.24.4 ou ultérieur et Node.js :
 
 ```bash
-node scripts/init-env.mjs
-docker compose up --build -d --wait --wait-timeout 300
+./start-project.sh
 ```
 
-Le script crée `.env` avec des secrets aléatoires et des droits restreints ; il
+Le script vérifie Docker, construit les images et attend que les services soient
+prêts (jusqu’à 600 secondes). Il affiche les adresses avec les ports configurés.
+Il crée `.env` avec des secrets aléatoires et des droits restreints ; il
 conserve un fichier existant. Le fichier n’est pas suivi par Git. Les ports se
 modifient avec `WEB_PORT`, `CMS_PORT` et `S3_PORT` dans ce fichier.
 

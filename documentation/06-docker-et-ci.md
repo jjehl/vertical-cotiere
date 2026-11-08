@@ -31,7 +31,7 @@ docker compose up --build -d --wait --wait-timeout 300
 
 Le script crée `.env` avec des secrets aléatoires et des droits restreints ; il
 conserve un fichier existant. Le fichier n’est pas suivi par Git. Les ports se
-modifient avec `WEB_PORT` et `CMS_PORT` dans ce fichier.
+modifient avec `WEB_PORT`, `CMS_PORT` et `S3_PORT` dans ce fichier.
 
 Le [guide de l’assistant de publication](12-assistant-administration.md) décrit
 les paramètres Mistral facultatifs et la fourniture de la clé privée sur OVH.
@@ -54,7 +54,7 @@ sans écraser les contenus déjà présents. La migration vers les publications 
 Compose si l’on souhaite supprimer définitivement un contenu initial. Le jeu initial contient les 38 pages, 31 articles et 30 événements du site public ;
 les fichiers associés sont repris dans la médiathèque avec `IMPORT_MEDIA=true`. Voir le [guide d’administration](10-administration-medias-et-horaires.md).
 
-Les volumes `postgres_data` et `uploads` sont conservés lors de `docker compose
+Les volumes `postgres_data`, `seaweedfs_data` et `uploads` sont conservés lors de `docker compose
 down`. La commande avec `-v` supprimerait les données : elle ne fait pas partie
 du cycle de développement ordinaire.
 
@@ -149,11 +149,11 @@ Ouvrir ensuite <http://localhost:1337/admin>. Un accès HTTPS pour les bénévol
 sera à préparer avant usage réel en production. L’import initial est désactivé par défaut en production (`SEED_CONTENT=false`).
 Pour reprendre l’instantané public sur une nouvelle base, activer temporairement
 `SEED_CONTENT=true` dans `.env.production`, démarrer le CMS, puis remettre `false`
-et le recréer après vérification. Pour une base vierge, activer aussi `IMPORT_MEDIA=true` et fournir le dossier de galerie. Après migration, remettre cette variable à `false`. Les médias affichés par le site proviennent du volume `uploads` de Strapi. Restaurer ensemble ce volume et la base permet de conserver toutes les publications et leurs fichiers.
+et le recréer après vérification. Pour une base vierge, activer aussi `IMPORT_MEDIA=true` et fournir le dossier de galerie. Après migration, remettre cette variable à `false`. Les médias sont stockés dans S3 (SeaweedFS en local, OVH en recette/production). Le volume `uploads` conserve les anciens fichiers jusqu’à leur transfert. Voir le [guide S3](14-stockage-s3.md) pour les variables requises et la migration.
 
 ## Sauvegarde et mises à jour
 
-Sauvegarder PostgreSQL et les fichiers de `uploads` ensemble avant toute mise à
+Sauvegarder PostgreSQL, les objets S3 et les anciens fichiers de `uploads` ensemble avant toute mise à
 jour du CMS. Exemple de sauvegarde de base (hors dépôt) :
 
 ```bash
@@ -182,6 +182,5 @@ Les originaux de galerie ne sont pas inclus dans Git ou dans les images Docker.
 En local, `frontend/public/gallery/` est monté en lecture seule dans le **CMS** sous
 `/app/legacy-gallery` pour la migration initiale. Sur OVH, copier ce dossier et
 renseigner `GALLERY_DIRECTORY` avant la première migration, avec `IMPORT_MEDIA=true`.
-Ensuite, le site utilise les médias gérés dans `uploads`, sans montage photo dans
-Nuxt. Voir les [instructions de reprise](08-reprise-des-contenus.md) et le
+Ensuite, transférer les médias vers S3 avec `MIGRATE_LOCAL_MEDIA=true` ; le site utilise les URL de la médiathèque sans montage photo dans Nuxt. Voir le [guide S3](14-stockage-s3.md). Voir les [instructions de reprise](08-reprise-des-contenus.md) et le
 [guide d’administration](10-administration-medias-et-horaires.md).

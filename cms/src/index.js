@@ -23,6 +23,7 @@ module.exports = {
       await require('./lib/link-inline-media')(strapi);
       await require('./lib/migrate-club-content')(strapi);
       await require('./lib/migrate-competition-photo')(strapi);
+      await require('./lib/migrate-local-storage')(strapi);
       await require('./lib/migrate-publications')(strapi);
       return;
     }
@@ -59,6 +60,7 @@ module.exports = {
     await require('./lib/link-inline-media')(strapi);
     await require('./lib/migrate-club-content')(strapi);
     await require('./lib/migrate-competition-photo')(strapi);
+    await require('./lib/migrate-local-storage')(strapi);
     await require('./lib/migrate-publications')(strapi);
   },
 };

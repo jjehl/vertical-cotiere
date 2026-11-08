@@ -57,6 +57,10 @@ jobs:
         run: node scripts/create-ci-gallery.mjs "$TEST_GALLERY_DIRECTORY"
       - run: docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml config --quiet
       - run: docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml up --build -d --wait --wait-timeout 600
+      - name: Stockage S3 et reprise des migrations
+        run: |
+          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T cms node --test tests/storage.test.js
+          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T cms node tests/storage.integration.js
       - name: Téléversements, remplacements et publication CMS
         run: docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e RUN_CONTENT_TESTS=true -e SEED_CONTENT=false -e IMPORT_MEDIA=false cms node tests/content.integration.js
       - name: Assistant IA sans clé réelle (permissions, photos et publication)

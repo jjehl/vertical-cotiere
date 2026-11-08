@@ -12,6 +12,8 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     cmsUrl: 'http://localhost:1337',
+    mediaPublicBaseUrl: '',
+    mediaInternalBaseUrl: '',
   },
   typescript: { strict: true },
 })

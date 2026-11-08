@@ -72,7 +72,10 @@ useSeoMeta({ title: "Horaires & accès — Vertical Côtière" });
         également le créneau proposé sur HelloAsso.
       </p>
       <p v-if="timetable?.note">{{ timetable.note }}</p>
-      <div class="timetable-scroll" v-if="timetable">
+      <TrainingWeek v-if="timetable" :sessions="timetable.sessions" :season="timetable.season" />
+      <details v-if="timetable">
+        <summary>Consulter tous les détails en tableau</summary>
+        <div class="timetable-scroll">
         <table class="timetable">
           <caption>
             Horaires des cours
@@ -105,7 +108,8 @@ useSeoMeta({ title: "Horaires & accès — Vertical Côtière" });
             </tr>
           </tbody>
         </table>
-      </div>
+        </div>
+      </details>
     </section>
     <section class="timetable-section" v-if="timetable">
       <span class="eyebrow">Mur UFRAPS / SIUAPS · Villeurbanne</span>

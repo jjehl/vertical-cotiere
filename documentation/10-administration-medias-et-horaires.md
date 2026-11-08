@@ -85,8 +85,19 @@ Dans **Content Manager → Single Types → Horaires et UFRAPS** :
 - **Jours de fermeture exceptionnels** : une date et un motif par jour, notamment jours fériés et ponts.
 - **Plannings et documents joints** : fichiers complémentaires consultables sur la page des horaires.
 
-L’ordre des créneaux dans le formulaire est conservé sur le site. Laisser le nombre
-de places vide lorsqu’il n’est pas précisé. Pour une période allant du lundi au
+Sur la page des horaires, les cours sont présentés en **semaine type** : jours en
+colonnes et échelle horaire commune sur ordinateur, puis jours successifs sur
+mobile. Les séances encadrées, compétition et pratique autonome sont distinguées
+par leur couleur et leur libellé. Un clic sur un créneau ouvre son détail :
+public, années de naissance, capacité et encadrement. Les cours simultanés sont
+placés côte à côte. Un dimanche apparaît si un créneau y est publié.
+
+La semaine est triée par jour et heure ; le tableau détaillé, accessible sous
+« Consulter tous les détails en tableau », conserve l’ordre du formulaire. Les
+deux vues lisent les mêmes données Strapi, sans double saisie. Le nombre de places
+correspond à la capacité annoncée, pas à un compteur de places restantes.
+
+Laisser le nombre de places vide lorsqu’il n’est pas précisé. Pour une période allant du lundi au
 dimanche inclus, indiquer ces deux dates ; l’ouverture suivante dépend ensuite du
 jour habituel configuré. La liste des ouvertures est calculée automatiquement.
 Les heures inversées, les saisons et les périodes de fermeture inversées sont

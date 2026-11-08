@@ -39,17 +39,16 @@ Renseigner `MISTRAL_API_KEY` dans le `.env` local puis exécuter
 `docker compose up -d --force-recreate cms`. Le modèle par défaut est
 `ministral-8b-2512`. Sans clé, les formulaires habituels restent disponibles.
 
-Sur OVH, le workflow **Déployer la clé Mistral sur OVH** transmet la clé depuis
-les Secrets GitHub par SSH et recrée le CMS. Il met à jour le `.env.production`
-privé du serveur ; aucune saisie de la clé Mistral sur OVH n’est nécessaire.
-La construction des images reste indépendante de cette clé. Voir le
-[guide de configuration et de sécurité](documentation/12-assistant-administration.md).
+Sur OVH, les secrets sont gérés dans le Vault du dépôt `infra-ovh`, séparément
+pour la recette et la production. Les images ne contiennent pas de clé Mistral.
 
 ## Livraison
 
-GitHub Actions construit les images `web` et `cms` et les publie sur GHCR pour
-`main` et les tags `v*`. Les pull requests vérifient les images sans les publier.
-Le Compose OVH consomme un tag explicite, sans déploiement automatique.
+Un push sur **main** lance les tests, publie les images versionnées par le SHA
+complet et déploie en **re7** avec Ansible. Publier une release stable **1.0.0**
+déploie en **prod**. Les deux environnements ont des comptes SSH restreints et
+des données séparées. Les prérequis sont détaillés dans le
+[guide de livraison re7/prod](documentation/13-deploiement-re7-prod.md).
 
 La [documentation](documentation/README.md) décrit l’existant, les choix techniques,
 le [fonctionnement Docker et CI](documentation/06-docker-et-ci.md) et

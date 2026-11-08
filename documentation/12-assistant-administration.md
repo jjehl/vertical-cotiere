@@ -1,5 +1,10 @@
 # Assistant de publication dans Strapi
 
+> Pour les nouveaux environnements re7/prod, la clé Mistral est gérée dans le
+> Vault d'infrastructure. L'ancien workflow de rotation SSH décrit ci-dessous
+> a été remplacé : voir [le guide de livraison](13-deploiement-re7-prod.md).
+
+
 ## Utilisation
 
 Le menu **Assistant de publication** permet de créer une publication à partir

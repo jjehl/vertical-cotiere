@@ -1,27 +1,46 @@
-name: Vérifier et construire les images
+name: Vérifier, construire et déployer
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
-    tags: ['v*']
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: images-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    outputs:
+      environment: ${{ steps.plan.outputs.environment }}
+      version: ${{ steps.plan.outputs.version }}
+      revision: ${{ steps.plan.outputs.revision }}
+      publish: ${{ steps.plan.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Déterminer la version et vérifier la release
+        id: plan
+        run: python3 scripts/deployment-plan.py
   check:
+    needs: plan
     runs-on: ubuntu-latest
     env:
       TEST_GALLERY_DIRECTORY: ${{ github.workspace }}/.tmp/ci-gallery
       BASE_URL: http://127.0.0.1:3100
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Vérifier le playbook Ansible sans connexion OVH
+        run: |
+          python -m pip install -r deploy/ansible/requirements.txt
+          ansible-playbook -i localhost, deploy/ansible/deploy.yml --syntax-check
       - name: Vérifier le déploiement des secrets (sans connexion OVH)
         run: python3 -m unittest discover -s scripts/tests -p 'test_*.py'
       - uses: actions/setup-node@v4
@@ -57,19 +76,14 @@ jobs:
         if: always()
         run: docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml down -v
   images:
-    needs: check
-    runs-on: ubuntu-latest
+    needs: [plan, check]
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - component: web
-            dockerfile: frontend/Dockerfile
-          - component: cms
-            dockerfile: cms/Dockerfile
+    outputs:
+      web_digest: ${{ steps.web.outputs.digest }}
+      cms_digest: ${{ steps.cms.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -77,29 +91,104 @@ jobs:
         id: image
         env:
           REPOSITORY: ${{ github.repository }}
-        run: echo "name=ghcr.io/${REPOSITORY,,}-${{ matrix.component }}" >> "$GITHUB_OUTPUT"
+        run: echo "name=ghcr.io/${REPOSITORY,,}" >> "$GITHUB_OUTPUT"
       - uses: docker/login-action@v3
-        if: github.event_name != 'pull_request'
+        if: needs.plan.outputs.publish == 'true'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/metadata-action@v5
-        id: meta
-        with:
-          images: ${{ steps.image.outputs.name }}
-          flavor: latest=false
-          tags: |
-            type=sha,format=long
-            type=ref,event=tag
-      - uses: docker/build-push-action@v6
+      - name: Construire le frontend
+        id: web
+        uses: docker/build-push-action@v6
         with:
           context: .
-          file: ${{ matrix.dockerfile }}
+          file: frontend/Dockerfile
           target: production
           platforms: linux/amd64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.component }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+          push: ${{ needs.plan.outputs.publish == 'true' }}
+          tags: ${{ steps.image.outputs.name }}-web:${{ needs.plan.outputs.version }}
+          labels: |
+            org.opencontainers.image.revision=${{ needs.plan.outputs.revision }}
+            org.opencontainers.image.version=${{ needs.plan.outputs.version }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+      - name: Construire le CMS
+        id: cms
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: cms/Dockerfile
+          target: production
+          platforms: linux/amd64
+          push: ${{ needs.plan.outputs.publish == 'true' }}
+          tags: ${{ steps.image.outputs.name }}-cms:${{ needs.plan.outputs.version }}
+          labels: |
+            org.opencontainers.image.revision=${{ needs.plan.outputs.revision }}
+            org.opencontainers.image.version=${{ needs.plan.outputs.version }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=cms
+          cache-to: type=gha,mode=max,scope=cms
+  deploy:
+    needs: [plan, images]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: ${{ needs.plan.outputs.environment }}
+    concurrency:
+      group: vertical-deploy-${{ needs.plan.outputs.environment }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Écarter une ancienne recette si main a avancé
+        id: latest
+        uses: actions/github-script@v7
+        env:
+          DEPLOY_ENVIRONMENT: ${{ needs.plan.outputs.environment }}
+          DEPLOY_REVISION: ${{ needs.plan.outputs.revision }}
+        with:
+          script: |
+            if (process.env.DEPLOY_ENVIRONMENT === 'prod') {
+              core.setOutput('deploy', 'true');
+            } else {
+              const ref = await github.rest.git.getRef({...context.repo, ref: 'heads/main'});
+              core.setOutput('deploy', String(ref.data.object.sha === process.env.DEPLOY_REVISION));
+            }
+      - uses: actions/setup-python@v5
+        if: steps.latest.outputs.deploy == 'true'
+        with:
+          python-version: '3.12'
+      - name: Installer Ansible
+        if: steps.latest.outputs.deploy == 'true'
+        run: python -m pip install -r deploy/ansible/requirements.txt
+      - name: Préparer la clé restreinte et les empreintes vérifiées
+        if: steps.latest.outputs.deploy == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_SSH_KEY"
+          test -n "$DEPLOY_KNOWN_HOSTS"
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/vertical-deploy-key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/vertical-known-hosts"
+      - name: Déployer avec Ansible et attendre les contrôles de santé
+        if: steps.latest.outputs.deploy == 'true'
+        env:
+          OVH_HOST: ${{ vars.OVH_HOST }}
+          OVH_PORT: ${{ vars.OVH_PORT }}
+          DEPLOY_ENVIRONMENT: ${{ needs.plan.outputs.environment }}
+          DEPLOY_VERSION: ${{ needs.plan.outputs.version }}
+          DEPLOY_REVISION: ${{ needs.plan.outputs.revision }}
+          DEPLOY_WEB_DIGEST: ${{ needs.images.outputs.web_digest }}
+          DEPLOY_CMS_DIGEST: ${{ needs.images.outputs.cms_digest }}
+          DEPLOY_SSH_KEY_FILE: ${{ runner.temp }}/vertical-deploy-key
+          DEPLOY_KNOWN_HOSTS_FILE: ${{ runner.temp }}/vertical-known-hosts
+        run: ansible-playbook -i localhost, deploy/ansible/deploy.yml
+      - name: Supprimer les credentials temporaires
+        if: always()
+        run: rm -f "$RUNNER_TEMP/vertical-deploy-key" "$RUNNER_TEMP/vertical-known-hosts"

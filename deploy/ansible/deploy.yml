@@ -1,0 +1,56 @@
+---
+# Local orchestration: restricted target accounts cannot execute Ansible modules or SFTP.
+- name: Deploy Vertical Cotiere through the controlled server entrypoint
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    deploy_environment: "{{ lookup('ansible.builtin.env', 'DEPLOY_ENVIRONMENT') }}"
+    deploy_version: "{{ lookup('ansible.builtin.env', 'DEPLOY_VERSION') }}"
+    deploy_revision: "{{ lookup('ansible.builtin.env', 'DEPLOY_REVISION') }}"
+    deploy_web_digest: "{{ lookup('ansible.builtin.env', 'DEPLOY_WEB_DIGEST') }}"
+    deploy_cms_digest: "{{ lookup('ansible.builtin.env', 'DEPLOY_CMS_DIGEST') }}"
+    deploy_host: "{{ lookup('ansible.builtin.env', 'OVH_HOST') }}"
+    deploy_port: "{{ lookup('ansible.builtin.env', 'OVH_PORT') | default('22', true) }}"
+    deploy_key_file: "{{ lookup('ansible.builtin.env', 'DEPLOY_SSH_KEY_FILE') }}"
+    deploy_known_hosts: "{{ lookup('ansible.builtin.env', 'DEPLOY_KNOWN_HOSTS_FILE') }}"
+  tasks:
+    - name: Validate deployment request before opening SSH
+      ansible.builtin.assert:
+        that:
+          - deploy_environment in ['re7', 'prod']
+          - deploy_host is match('^[A-Za-z0-9][A-Za-z0-9.:-]*$')
+          - deploy_port is match('^[0-9]+$')
+          - deploy_port | int >= 1 and deploy_port | int <= 65535
+          - deploy_revision is match('^[0-9a-f]{40}$')
+          - deploy_web_digest is match('^sha256:[0-9a-f]{64}$')
+          - deploy_cms_digest is match('^sha256:[0-9a-f]{64}$')
+          - deploy_key_file | length > 0
+          - deploy_known_hosts | length > 0
+          - (deploy_environment == 're7' and deploy_version == deploy_revision) or (deploy_environment == 'prod' and deploy_version is match('^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$'))
+    - name: Request only the fixed privileged deployment procedure
+      ansible.builtin.command:
+        argv:
+          - ssh
+          - -T
+          - -o
+          - BatchMode=yes
+          - -o
+          - IdentitiesOnly=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - "UserKnownHostsFile={{ deploy_known_hosts }}"
+          - -o
+          - ConnectTimeout=20
+          - -i
+          - "{{ deploy_key_file }}"
+          - -p
+          - "{{ deploy_port }}"
+          - "deploy_vertical_{{ deploy_environment }}@{{ deploy_host }}"
+          - "deploy {{ deploy_version }} {{ deploy_web_digest }} {{ deploy_cms_digest }} {{ deploy_revision }}"
+      register: deployment_result
+      changed_when: "'DEPLOYED ' in deployment_result.stdout"
+    - name: Report confirmed deployment
+      ansible.builtin.debug:
+        msg: "{{ deployment_result.stdout }}"

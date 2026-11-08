@@ -1,5 +1,8 @@
 # 06 — Docker local, CI GitHub et Compose OVH
 
+> Le déploiement OVH manuel ci-dessous est historique. Pour le parcours actif
+> main → re7 et release → prod, suivre [le guide de livraison](13-deploiement-re7-prod.md).
+
 ## Organisation
 
 | Emplacement | Rôle |

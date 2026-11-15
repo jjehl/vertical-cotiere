@@ -1,0 +1,9 @@
+module.exports={routes:[
+  ['GET','/content-sync/export','export'],
+  ['GET','/content-sync/files/:id','download'],
+  ['POST','/content-sync/plan','plan'],
+  ['POST','/content-sync/files','upload'],
+  ['POST','/content-sync/import','import'],
+].map(([method,path,action])=>({method,path,handler:'content-sync.'+action,config:{
+  auth:{scope:['api::content-sync.content-sync.'+action]},policies:['global::content-sync-token'],
+}}))};

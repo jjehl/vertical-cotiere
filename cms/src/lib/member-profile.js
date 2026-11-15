@@ -1,7 +1,7 @@
 const {errors}=require('@strapi/utils');
 const fields={firstName:80,lastName:80,phone:40,street:250,postalCode:20,city:120,country:100,ffmeLicenseNumber:40};
 function profile(user) {
-  return {id:user.id,email:user.email,...Object.fromEntries(Object.keys(fields).map(key=>[key,user[key]||''])),role:user.role?.type==='contributor'?'contributor':'basic'};
+  return {id:user.id,username:user.username,email:user.email,emailConfirmed:user.confirmed===true,hasPassword:Boolean(user.password),googleConnected:Boolean(user.googleSubject),...Object.fromEntries(Object.keys(fields).map(key=>[key,user[key]||''])),role:user.role?.type==='contributor'?'contributor':'basic'};
 }
 function validateProfile(input) {
   if(!input||typeof input!=='object'||Array.isArray(input))throw new errors.ValidationError('Profil invalide.');

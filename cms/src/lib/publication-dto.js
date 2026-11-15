@@ -23,7 +23,7 @@ function publicationDto(row,{detail=false,index={photos:{},assets:{}}}={}){
     const legacy=new Map(Object.entries(index.photos||{}).map(([old,id])=>[Number(id),Number(old)]));
     const aliases=new Map(Object.values(index.assets||{}).filter(a=>a.documentSlug).map(a=>[a.mediaId,'/document-files/'+a.documentSlug]));
     result.body=row.body||'';result.bodyHtml=html(row);
-    result.photos=(row.photos||[]).map(f=>({id:f.id,legacyId:legacy.get(f.id),title:f.caption||f.alternativeText||f.name,src:mediaUrl(f),thumb:mediaUrl(f)+'?variant=thumbnail',width:f.width,height:f.height}));
+    result.photos=(row.photos||[]).map(f=>({id:f.id,legacyId:legacy.get(f.id),title:f.caption||f.alternativeText||f.name,src:mediaUrl(f),thumb:mediaUrl(f)+'?variant=thumbnail',width:f.width,height:f.height,...(f.addedBy?{addedBy:f.addedBy}:{})}));
     result.attachments=(row.attachments||[]).filter(f=>!result.bodyHtml.includes('/media/'+f.id)&&(!aliases.has(f.id)||!result.bodyHtml.includes(aliases.get(f.id)))).map(mediaDto);
   }
   return result;

@@ -7,9 +7,13 @@ module.exports=async function configureMembers(strapi) {
   if(!contributor)contributor=await roles.create({data:{name:'Contributeur',description:'Profil et gestion de ses propres publications depuis le site.',type:'contributor'}});
   await roles.update({where:{id:basic.id},data:{name:'Utilisateur basique',description:'Consultation et modification de son profil personnel.'}});
   const permissions=strapi.db.query('plugin::users-permissions.permission');
-  const profile=['me','updateProfile','password'];
-  const contribution=['publications','assistantStatus','assistantPublication','assistantPrepare','assistantConfirm','photos','photo'];
+  const profile=['me','updateProfile','password','publicationPhotoIds','deletePublicationPhoto','participationPoll','registerParticipation','searchParticipationMembers'];
+  const contribution=['publications','assistantStatus','assistantPublication','assistantPrepare','assistantConfirm','photos','photo','publicationPhotos','createParticipationPoll'];
   for(const role of [basic,contributor]) {
+    for(const name of ['checkout','status']) {
+      const action='api::course-registration.course-registration.'+name;
+      if(!await permissions.findOne({where:{role:role.id,action}}))await permissions.create({data:{role:role.id,action}});
+    }
     for(const action of [...profile,...(role.id===contributor.id?contribution:[])].map(name=>'api::member.member.'+name)) {
       if(!await permissions.findOne({where:{role:role.id,action}}))await permissions.create({data:{role:role.id,action}});
     }
@@ -20,7 +24,7 @@ module.exports=async function configureMembers(strapi) {
     await permissions.deleteMany({where:{role:role.id,action:{$startsWith:'plugin::users-permissions.user.'}}});
   }
   const advanced=strapi.store({type:'plugin',name:'users-permissions',key:'advanced'});
-  await advanced.set({value:{...(await advanced.get()),allow_register:true,default_role:'authenticated',unique_email:true}});
+  await advanced.set({value:{...(await advanced.get()),allow_register:true,default_role:'authenticated',unique_email:false}});
   const marker=strapi.store({type:'core',name:'vertical-admin',key:'member-profile-form-v1'});
   if(!await marker.get()) {
     const model=strapi.contentTypes['plugin::users-permissions.user'];

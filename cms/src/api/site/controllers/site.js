@@ -1,4 +1,5 @@
 const {publicationDto,meetingDto}=require('../../../lib/publication-dto');
+const {withCommunityPhotos}=require('../../../lib/publication-photos');
 const publicationUid='api::publication.publication';
 const publicationPopulate={photos:true,attachments:true,coverImage:true,meeting:true};
 const {getMediaIndex,mediaUrl,mediaDto,documentDto,imagePosition}=require('../../../lib/media-urls');
@@ -10,23 +11,32 @@ const withCover=({coverImage,...item},aliases)=>({...withAttachments(item,aliase
 const time=value=>value?.slice(0,5)||'';
 const publishedFile=async id=>{
   const file=await strapi.db.query('plugin::upload.file').findOne({where:{id},populate:{related:true}});
-  return file?.related?.some(row=>row.publishedAt&&!['api::article.article','api::event.event','api::album.album'].includes(row.__type))?file:null;
+  if(!file)return null;
+  if(file.related?.some(row=>row.publishedAt&&!['api::article.article','api::event.event','api::album.album'].includes(row.__type)))return file;
+  const upload=await strapi.db.query('api::member-upload.member-upload').findOne({where:{file:id,publicationDocumentId:{$notNull:true}},select:['publicationDocumentId']});
+  if(!upload)return null;
+  const publication=await strapi.documents(publicationUid).findOne({documentId:upload.publicationDocumentId,status:'published',fields:['documentId']});
+  return publication?file:null;
 };
 module.exports={
   async albums(ctx){
     const rows=await strapi.documents(publicationUid).findMany({status:'published',filters:{legacyType:'album'},populate:publicationPopulate,limit:1000});
-    ctx.body=rows.map(row=>({slug:row.legacySlug,title:row.title,description:row.body,cover:mediaUrl(row.coverImage||row.photos?.[0]),count:row.photos?.length||0}));
+    ctx.body=(await withCommunityPhotos(strapi,rows)).map(row=>({slug:row.legacySlug,title:row.title,description:row.body,cover:mediaUrl(row.coverImage||row.photos?.[0]),count:row.photos?.length||0}));
   },
   async album(ctx){
     const row=await strapi.documents(publicationUid).findFirst({status:'published',filters:{legacyType:'album',legacySlug:ctx.params.slug},populate:publicationPopulate});
     if(!row)return ctx.notFound('Publication introuvable');
-    const detail=publicationDto(row,{detail:true,index:await getMediaIndex(strapi)});
+    const [withPhotos]=await withCommunityPhotos(strapi,[row]);
+    const detail=publicationDto(withPhotos,{detail:true,index:await getMediaIndex(strapi)});
     ctx.body={slug:row.slug,title:row.title,description:row.body,photos:detail.photos};
   },
   async publication(ctx){
     const row=await strapi.documents(publicationUid).findFirst({status:'published',filters:{slug:ctx.params.slug},populate:publicationPopulate});
     if(!row)return ctx.notFound('Publication introuvable');
-    ctx.body=publicationDto(row,{detail:true,index:await getMediaIndex(strapi)});
+    const [withPhotos]=await withCommunityPhotos(strapi,[row]);
+    ctx.body=publicationDto(withPhotos,{detail:true,index:await getMediaIndex(strapi)});
+    // Public responses expose only the existence of a poll, never its participants.
+    ctx.body.hasParticipationPoll=!!row.meeting&&!!await require('../../../lib/participation-polls').findPoll(strapi,row.documentId);
   },
   async publicationAlias(ctx){
     const match=String(ctx.query.path||'').match(/^\/(actualites|agenda|albums)\/([^/]+)\/?$/);
@@ -50,8 +60,9 @@ module.exports={
     }
     const index=await getMediaIndex(strapi);
     const aliases=new Map(Object.values(index.assets).filter(a=>a.documentSlug).map(a=>[a.mediaId,'/document-files/'+a.documentSlug]));
-    const publications=publicationRows.map(row=>publicationDto(row)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||a.title.localeCompare(b.title,'fr'));
-    const events=publicationRows.map(meetingDto).filter(Boolean).sort((a,b)=>a.start.localeCompare(b.start));
+    const rowsWithPhotos=await withCommunityPhotos(strapi,publicationRows);
+    const publications=rowsWithPhotos.map(row=>publicationDto(row)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||a.title.localeCompare(b.title,'fr'));
+    const events=rowsWithPhotos.map(meetingDto).filter(Boolean).sort((a,b)=>a.start.localeCompare(b.start));
     ctx.body={activities:activities.map(row=>withCover(row,aliases)),publications,events,pages:pages.map(row=>withAttachments(row,aliases)),timetable:plan};
   },
   async documents(ctx){

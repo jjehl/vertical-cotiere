@@ -16,10 +16,12 @@ useSeoMeta({
     </p>
     <h2>Vos données</h2>
     <p>
-      Ce prototype n’utilise pas de mesure d’audience ni de formulaire de
-      collecte. Les inscriptions et les paiements sont effectués sur HelloAsso.
-      Lorsque vous suivez un lien externe, les règles du service concerné
-      s’appliquent.
+      Les informations saisies sur ce site servent à gérer votre compte,
+      vos publications et votre inscription au club. Le dossier d’inscription
+      et le cours choisi sont conservés par le club ; les coordonnées du payeur,
+      le montant et la référence du dossier sont transmis à HelloAsso pour
+      le paiement sécurisé. Le site ne collecte pas vos coordonnées bancaires.
+      Pour toute question sur vos données, contactez le secrétariat.
     </p>
     <h2>Photographies d’illustration</h2>
     <p>

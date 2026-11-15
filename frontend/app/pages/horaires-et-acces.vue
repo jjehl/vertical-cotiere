@@ -61,8 +61,8 @@ useSeoMeta({
       <span class="eyebrow">Gymnase Louis Armstrong · Beynost</span>
       <h2>Les cours {{ timetable?.season }}.</h2>
       <p class="fine-print">
-        Planning publié par le club. Pour choisir votre inscription, vérifiez
-        également le créneau proposé sur HelloAsso.
+        Planning publié par le club. Consultez les places disponibles et
+        choisissez votre créneau sur la <NuxtLink to="/inscriptions#creneaux">page d’inscription</NuxtLink>.
       </p>
       <p v-if="timetable?.note">{{ timetable.note }}</p>
       <TrainingWeek v-if="timetable" :sessions="timetable.sessions" :season="timetable.season" />

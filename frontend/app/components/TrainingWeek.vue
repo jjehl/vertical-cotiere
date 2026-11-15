@@ -2,7 +2,9 @@
 import { trainingDays, trainingWeek } from '#shared/training-week'
 import type { TrainingSlot } from '#shared/types'
 
-const props = defineProps<{ sessions: TrainingSlot[]; season: string }>()
+const props = defineProps<{ sessions: TrainingSlot[]; season: string; registrationMode?:boolean }>()
+const emit=defineEmits<{select:[slot:TrainingSlot]}>()
+function chooseSlot(slot:TrainingSlot){ emit('select',slot); dialog.value?.close() }
 const week = computed(() => trainingWeek(props.sessions))
 const ticks = computed(() => Array.from({ length: (week.value.end - week.value.start) / 30 + 1 }, (_, index) => {
   const minute = week.value.start + index * 30
@@ -49,6 +51,7 @@ function closeBackdrop(event: MouseEvent) {
             <button type="button" class="training-session" :class="`training-session--${kind(item.slot)}`" aria-haspopup="dialog" :aria-label="`${day.name}, ${item.slot.start} à ${item.slot.end}, ${item.slot.audience}. Voir les détails`" @click="showSlot(item.slot)">
               <span class="training-session__time">{{ item.slot.start }} – {{ item.slot.end }}</span>
               <strong class="training-session__audience">{{ item.slot.audience }}</strong>
+              <span v-if="registrationMode" class="training-session__note">{{ item.slot.remaining == null ? 'Nous consulter' : item.slot.remaining === 0 ? 'Complet' : `${item.slot.remaining} place${item.slot.remaining > 1 ? 's' : ''}` }}</span>
               <span v-if="!item.slot.supervised" class="training-session__note">Non encadré</span>
             </button>
           </li>
@@ -67,10 +70,12 @@ function closeBackdrop(event: MouseEvent) {
         <dl>
           <dt>Lieu</dt><dd>Gymnase Louis Armstrong, Beynost</dd>
           <dt>Années de naissance</dt><dd>{{ selected.birthYears || 'Non précisées' }}</dd>
-          <dt>Places indiquées</dt><dd>{{ selected.capacity ?? 'Non précisées' }}</dd>
+          <dt>{{ registrationMode ? 'Places disponibles' : 'Capacité' }}</dt><dd>{{ registrationMode ? (selected.remaining ?? 'Nous consulter') : (selected.capacity ?? 'Non précisée') }}</dd>
           <dt>Encadrement</dt><dd>{{ selected.supervised ? 'Séance encadrée' : 'Pratique autonome, non encadrée' }}</dd>
         </dl>
-        <p class="fine-print">Le nombre de places indique la capacité du créneau. Vérifiez les disponibilités sur HelloAsso lors de l’inscription.</p>
+        <button v-if="registrationMode" type="button" class="button button-orange" :disabled="selected.remaining === 0" @click="chooseSlot(selected)">{{ selected.remaining === 0 ? 'Créneau complet' : 'Choisir ce créneau' }}</button>
+        <NuxtLink v-else to="/inscriptions#creneaux" class="text-link" @click="dialog?.close()">Choisir un créneau et s’inscrire <ArrowIcon /></NuxtLink>
+        <p class="fine-print">{{ registrationMode ? 'La disponibilité sera vérifiée à nouveau au moment de lancer le paiement.' : 'Consultez les places disponibles sur la page d’inscription.' }}</p>
       </template>
     </dialog>
   </section>

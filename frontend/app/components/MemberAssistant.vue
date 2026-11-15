@@ -32,17 +32,29 @@ async function confirm(mode:'draft'|'publish'){if(!preview.value)return;await ru
     <NuxtLink to="/mes-publications" class="breadcrumb">← Mes publications</NuxtLink>
     <h1>{{editing?'Modifier ma':'Créer une'}}<br><em>publication.</em></h1>
     <p class="page-intro">Décrivez votre idée ou les changements souhaités. L’assistant prépare une proposition à vérifier avant de l’enregistrer.</p>
+    <section v-if="editing&&source" class="member-panel member-source" aria-labelledby="member-source-title">
+      <header class="member-source-header">
+        <h2 id="member-source-title">Publication actuelle</h2>
+        <span class="member-source-status">{{source.published?'En ligne':'Brouillon'}}</span>
+      </header>
+      <p class="fine-print">Contenu du brouillon enregistré, utilisé comme point de départ pour votre demande.</p>
+      <MemberPublicationPreview :publication="source.data" compact/>
+      <details v-if="photos.length" class="member-source-photos">
+        <summary>{{photos.length}} photo{{photos.length>1?'s':''}} jointe{{photos.length>1?'s':''}} · Voir les photos conservées</summary>
+        <ul class="member-photos"><li v-for="photo in photos" :key="photo.id"><img :src="photo.url" alt="" width="60" height="60" loading="lazy"><span>{{photo.name}}</span></li></ul>
+      </details>
+      <p v-else class="fine-print">Aucune photo jointe.</p>
+    </section>
     <div class="member-layout">
       <section class="member-panel member-form">
         <h2>1. Votre demande</h2>
         <p v-if="!status?.configured" class="member-notice">L’assistant est momentanément indisponible. Contactez le club pour préparer votre publication.</p>
-        <p v-if="editing&&source" class="member-notice">Modification de « {{source.data.title}} ». Le brouillon enregistré sert de point de départ. Vos photos et documents sont conservés.</p>
         <form class="member-form" :aria-busy="!!busy" @submit.prevent="prepare">
           <label for="member-instruction">{{editing?'Que souhaitez-vous modifier ?':'Que souhaitez-vous partager ?'}}<textarea id="member-instruction" v-model="instruction" required maxlength="6000" rows="8" :disabled="!!busy||!interactive" :placeholder="editing?'Décale la sortie au 23 mai et précise qu’il faut apporter un casque.':'Une sortie falaise le 16 mai 2027, de 9 h à 17 h à Vertrieu. Prévoir un pique-nique.'" @input="invalidate"/></label>
           <p class="fine-print">Pour un rendez-vous, précisez la date, les horaires et le lieu. Seul le texte est envoyé à l’assistant, pas les photos.</p>
           <label v-if="!editing" for="member-photos">Photos (facultatif)<input id="member-photos" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple :disabled="!!busy||!interactive" @change="upload"></label>
           <p v-if="!editing" class="fine-print">JPEG, PNG, WebP ou AVIF. 30 photos maximum, 20 Mo par photo et 25 Mo par import.</p>
-          <ul v-if="photos.length" class="member-photos"><li v-for="photo in photos" :key="photo.id"><img :src="photo.url" alt="" width="60" height="60"><span>{{photo.name}}</span><button v-if="!editing" type="button" :disabled="!!busy||!interactive" :aria-label="'Retirer '+photo.name" @click="invalidate();photos=photos.filter(item=>item.id!==photo.id)">Retirer</button></li></ul>
+          <ul v-if="!editing&&photos.length" class="member-photos"><li v-for="photo in photos" :key="photo.id"><img :src="photo.url" alt="" width="60" height="60"><span>{{photo.name}}</span><button type="button" :disabled="!!busy||!interactive" :aria-label="'Retirer '+photo.name" @click="invalidate();photos=photos.filter(item=>item.id!==photo.id)">Retirer</button></li></ul>
           <button type="submit" class="button button-dark member-prepare" :disabled="!!busy||!interactive||!status?.configured||!status?.canCreate||(editing&&!source)||!instruction.trim()">
             <span v-if="preparing" class="member-spinner" aria-hidden="true"/>
             {{preparing?'En attente de l’IA…':'Préparer la proposition'}}

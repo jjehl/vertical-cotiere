@@ -16,7 +16,9 @@ module.exports = {
   async bootstrap({ strapi }) {
     await require('./lib/migrate-publication-categories')(strapi);
     await require('./lib/configure-admin')(strapi);
+    await require('./lib/configure-registrations')(strapi);
     await require('./lib/configure-members')(strapi);
+    await require('./lib/migrate-participation-registrants')(strapi);
     if (process.env.SEED_CONTENT !== 'true') {
       await require('./lib/migrate-timetable')(strapi);
       await require('./lib/migrate-media')(strapi);

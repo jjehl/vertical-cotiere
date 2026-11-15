@@ -1,5 +1,6 @@
-import type { MemberProfile } from '#shared/member';
+import type { MemberProfile, MemberLoginAccount } from '#shared/member';
 import {resolveMediaUrl} from '../../utils/media-url';
+import {clearGoogleCookies,googlePendingCookie} from '../../utils/member-session';
 const cookie='vc_member_session';
 const methods:Record<string,Record<string,string>>={
   profile:{GET:'/api/member/me',PUT:'/api/member/profile'},password:{POST:'/api/member/password'},
@@ -23,8 +24,21 @@ export default defineEventHandler(async (event):Promise<unknown>=>{
   const cms=useRuntimeConfig().cmsUrl;
   const saveSession=(jwt:string)=>setCookie(event,cookie,jwt,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:8*3600});
   const clear=()=>deleteCookie(event,cookie,{path:'/'});
-  if(path==='logout'&&method==='POST'){clear();return {ok:true};}
+  if(path==='logout'&&method==='POST'){clear();clearGoogleCookies(event);return {ok:true};}
   try {
+    if(path==='google/config'&&method==='GET')return await $fetch(cms+'/api/auth/google/config',{timeout:10000});
+    if(path==='google/pending'&&method==='GET') {
+      const pendingToken=getCookie(event,googlePendingCookie);
+      if(!pendingToken)throw createError({statusCode:400,statusMessage:'La demande de liaison a expiré. Recommencez la connexion Google.'});
+      return await $fetch(cms+'/api/auth/google/pending',{method:'POST',body:{pendingToken},timeout:10000});
+    }
+    if(path==='google/link'&&method==='POST') {
+      const body=await readBody<Record<string,unknown>>(event);const pendingToken=getCookie(event,googlePendingCookie);
+      if(!pendingToken||!body||Object.keys(body).some(key=>!['accountId','password'].includes(key))||!Number.isSafeInteger(body.accountId)||typeof body.password!=='string'||body.password.length>256)throw createError({statusCode:400,statusMessage:'Demande de liaison invalide ou expirée.'});
+      const result=await $fetch<{jwt:string}>(cms+'/api/auth/google/link',{method:'POST',body:{...body,pendingToken},timeout:15000});
+      const profile=await $fetch<MemberProfile>(cms+'/api/member/me',{headers:{authorization:'Bearer '+result.jwt},timeout:10000});
+      saveSession(result.jwt);clearGoogleCookies(event);return {profile};
+    }
     if(path==='forgot-password'&&method==='POST') {
       const body=await readBody<Record<string,unknown>>(event);
       if(!body||typeof body.email!=='string'||Object.keys(body).some(key=>key!=='email')||body.email.length>254||!/^\S+@\S+\.\S+$/.test(body.email.trim()))throw createError({statusCode:400,statusMessage:'Adresse e-mail invalide.'});
@@ -41,17 +55,21 @@ export default defineEventHandler(async (event):Promise<unknown>=>{
     }
     if(['login','register'].includes(path)&&method==='POST') {
       const body=await readBody<Record<string,unknown>>(event);
-      const allowed=path==='login'?['email','password']:['email','password','firstName','lastName'];
+      const allowed=path==='login'?['email','password','accountId']:['username','email','password','firstName','lastName'];
       if(!body||typeof body!=='object'||Object.keys(body).some(key=>!allowed.includes(key)))throw createError({statusCode:400,statusMessage:'Paramètres de connexion invalides.'});
       if(typeof body.email!=='string'||typeof body.password!=='string'||body.email.length>254||body.password.length>256)throw createError({statusCode:400,statusMessage:'Identifiants invalides.'});
+      if(path==='login'&&body.accountId!==undefined&&(!Number.isSafeInteger(body.accountId)||Number(body.accountId)<1))throw createError({statusCode:400,statusMessage:'Compte invalide.'});
+      if(path==='register'&&(typeof body.username!=='string'||!(/^[a-zA-Z0-9._-]{3,80}$/).test(body.username.trim())))throw createError({statusCode:400,statusMessage:'Choisissez un identifiant de 3 à 80 lettres, chiffres, points, tirets ou underscores.'});
       if(path==='register'&&['firstName','lastName'].some(key=>typeof body[key]!=='string'||!(body[key] as string).trim()||(body[key] as string).trim().length>80))throw createError({statusCode:400,statusMessage:'Prénom et nom sont requis (80 caractères maximum).'});
-      const email=body.email.trim().toLowerCase();
-      const response=await $fetch<{jwt?:string}>(cms+(path==='login'?'/api/auth/local':'/api/auth/local/register'),{
-        method:'POST',body:path==='login'?{identifier:email,password:body.password}:{username:email,email,password:body.password,firstName:(body.firstName as string).trim(),lastName:(body.lastName as string).trim()},timeout:15000,
+      const email=body.email.trim();
+      const response=await $fetch<{jwt?:string;accounts?:MemberLoginAccount[]}>(cms+(path==='login'?'/api/auth/local':'/api/auth/local/register'),{
+        method:'POST',body:path==='login'?{identifier:email,password:body.password,...(body.accountId===undefined?{}:{accountId:body.accountId})}:{username:(body.username as string).trim(),email:email.toLowerCase(),password:body.password,firstName:(body.firstName as string).trim(),lastName:(body.lastName as string).trim()},timeout:15000,
       });
+      if(path==='login'&&response.accounts)return {accounts:response.accounts};
       if(!response.jwt)return {requiresConfirmation:true};
       const profile=await $fetch<MemberProfile>(cms+'/api/member/me',{headers:{authorization:'Bearer '+response.jwt},timeout:10000});
       saveSession(response.jwt);
+      clearGoogleCookies(event);
       return {profile};
     }
     const token=getCookie(event,cookie);
@@ -69,12 +87,18 @@ export default defineEventHandler(async (event):Promise<unknown>=>{
     let target=methods[path]?.[method];
     const publication=path.match(/^assistant\/publications\/([a-zA-Z0-9_-]{1,100})$/);
     if(publication&&method==='GET')target='/api/member/assistant/publications/'+publication[1];
+    const publicationPhotos=path.match(/^publications\/([a-zA-Z0-9_-]{1,200})\/photos$/);
+    if(publicationPhotos&&['GET','POST'].includes(method))target='/api/member/publications/'+publicationPhotos[1]+'/photos';
+    const deletePhoto=path.match(/^publications\/([a-zA-Z0-9_-]{1,200})\/photos\/(\d+)$/);
+    if(deletePhoto&&method==='DELETE')target='/api/member/publications/'+deletePhoto[1]+'/photos/'+deletePhoto[2];
+    const poll=path.match(/^publications\/([a-zA-Z0-9_-]{1,200})\/poll(\/register|\/members)?$/);
+    if(poll&&((!poll[2]&&['GET','POST'].includes(method))||(poll[2]==='/register'&&method==='POST')||(poll[2]==='/members'&&method==='GET')))target='/api/member/publications/'+poll[1]+'/poll'+(poll[2]||'');
     if(!target)throw createError({statusCode:404,statusMessage:'Action introuvable.'});
-    if(path==='photos') {
+    if(path==='photos'||(publicationPhotos&&method==='POST')) {
       if(Number(getHeader(event,'content-length')||0)>26*1024*1024)throw createError({statusCode:413,statusMessage:'Importer au maximum 25 Mo de photos à la fois.'});
       return proxyRequest(event,cms+target,{headers:{authorization:'Bearer '+token,cookie:''},fetchOptions:{redirect:'error'}});
     }
-    const response:unknown=await $fetch<unknown>(cms+target,{method:method as 'GET'|'POST'|'PUT',headers:{authorization:'Bearer '+token},...(['POST','PUT'].includes(method)?{body:await readBody(event)}:{}),timeout:path==='assistant/prepare'?55000:15000});
+    const response:unknown=await $fetch<unknown>(cms+target,{method:method as 'GET'|'POST'|'PUT'|'DELETE',headers:{authorization:'Bearer '+token},...(poll?.[2]==='/members'?{query:{q:getQuery(event).q}}:{}),...(['POST','PUT'].includes(method)?{body:await readBody(event)}:{}),timeout:path==='assistant/prepare'?55000:15000});
     if(path==='password') {
       const result=response as {jwt?:string};if(result.jwt)saveSession(result.jwt);
       return {ok:true};
@@ -84,7 +108,7 @@ export default defineEventHandler(async (event):Promise<unknown>=>{
     const failure=error as {statusCode?:number;status?:number;data?:{error?:{message?:string}};statusMessage?:string};
     const status=failure.statusCode||failure.status||502;
     if(status===401)clear();
-    const message=path==='forgot-password'&&status>=500?'L’envoi du lien est momentanément indisponible. Réessayez plus tard.':path==='login'&&[400,401,403].includes(status)?'Connexion impossible. Vérifiez votre e-mail et votre mot de passe.':failure.data?.error?.message||failure.statusMessage||(status>=500?'Le service membre est momentanément indisponible.':'La demande a été refusée.');
+    const message=path==='forgot-password'&&status>=500?'L’envoi du lien est momentanément indisponible. Réessayez plus tard.':path==='login'&&[400,401,403].includes(status)?'Connexion impossible. Vérifiez votre identifiant et votre mot de passe.':failure.data?.error?.message||failure.statusMessage||(status>=500?'Le service membre est momentanément indisponible.':'La demande a été refusée.');
     throw createError({statusCode:status,statusMessage:message.slice(0,500)});
   }
 });

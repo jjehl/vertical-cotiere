@@ -48,6 +48,8 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      - name: Commande de synchronisation des publications (API HTTP simulées)
+        run: node --test scripts/tests/sync-publications.test.mjs
       - run: npm ci
         working-directory: frontend
       - run: npm run test && npm run typecheck
@@ -70,11 +72,21 @@ jobs:
           docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e PORT=1347 cms node tests/assistant-edit.integration.js
       - name: Comptes membres, profils et contributions personnelles
         run: docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e RUN_MEMBER_TESTS=true cms node tests/members.integration.js
+      - name: Inscriptions aux cours, comptes et paiement simulé
+        run: docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e RUN_REGISTRATION_TESTS=true cms node tests/course-registrations.integration.cjs
+      - name: Fusion des publications par API (base temporaire et fichiers S3)
+        run: |
+          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml cp scripts/sync-publications.mjs cms:/tmp/vertical-sync-client.mjs
+          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T cms node --test tests/content-sync.test.js
+          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e RUN_CONTENT_SYNC_TESTS=true cms node tests/content-sync.integration.js
       - name: Installer le navigateur de recette
         run: npx playwright install --with-deps chromium
         working-directory: frontend
       - name: Parcours du site et connexion au CMS
         run: npx playwright test
+        working-directory: frontend
+      - name: Connexion Google et liaison des comptes (services simulés)
+        run: node e2e/member-google.cjs
         working-directory: frontend
       - name: Logs Compose en cas d’échec
         if: failure()

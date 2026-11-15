@@ -1,0 +1,11 @@
+{
+  "kind":"collectionType",
+  "collectionName":"participation_polls",
+  "info":{"singularName":"participation-poll","pluralName":"participation-polls","displayName":"Sondage de participation"},
+  "options":{"draftAndPublish":false},
+  "pluginOptions":{"content-manager":{"visible":false},"content-type-builder":{"visible":false}},
+  "attributes":{
+    "publicationDocumentId":{"type":"string","required":true,"unique":true,"column":{"unique":true,"notNullable":true},"private":true},
+    "createdByMember":{"type":"relation","relation":"manyToOne","target":"plugin::users-permissions.user","private":true}
+  }
+}

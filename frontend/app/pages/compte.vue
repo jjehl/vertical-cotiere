@@ -7,7 +7,7 @@ const fields=['firstName','lastName','email','phone','street','postalCode','city
 const form=reactive(Object.fromEntries(fields.map(key=>[key,profile.value?.[key]||''])) as Record<typeof fields[number],string>);
 const busy=ref(false);const error=ref('');const message=ref('');
 const passwords=reactive({currentPassword:'',password:'',passwordConfirmation:''});const passwordMessage=ref('');const passwordError=ref('');const passwordBusy=ref(false);
-async function save(){if(busy.value)return;busy.value=true;error.value='';message.value='';try{profile.value=await api<MemberProfile>('/api/member/profile',{method:'PUT',body:form});message.value='Votre profil a été enregistré.';}catch(value){error.value=memberError(value);}finally{busy.value=false;}}
+async function save(){if(busy.value)return;busy.value=true;error.value='';message.value='';try{profile.value=await api<MemberProfile>('/api/member/profile',{method:'PUT',body:form});message.value=profile.value.emailConfirmed?'Votre profil a été enregistré.':'Votre profil a été enregistré. Consultez votre messagerie pour valider votre nouvelle adresse e-mail avant de vous reconnecter.';}catch(value){error.value=memberError(value);}finally{busy.value=false;}}
 async function changePassword(){if(passwordBusy.value)return;passwordBusy.value=true;passwordError.value='';passwordMessage.value='';try{await api('/api/member/password',{method:'POST',body:passwords});passwords.currentPassword='';passwords.password='';passwords.passwordConfirmation='';passwordMessage.value='Votre mot de passe a été modifié.';}catch(value){passwordError.value=memberError(value);}finally{passwordBusy.value=false;}}
 useSeoMeta({title:'Mon profil — Vertical Côtière',robots:'noindex, nofollow'});
 </script>
@@ -26,6 +26,7 @@ useSeoMeta({title:'Mon profil — Vertical Côtière',robots:'noindex, nofollow'
     <div class="member-layout">
       <form class="member-panel member-form" @submit.prevent="save">
         <h2>Mes informations</h2>
+        <p>Mon identifiant : <strong>{{profile?.username}}</strong></p>
         <p v-if="error" class="member-error" role="alert">{{error}}</p><p v-if="message" class="member-success" role="status">{{message}}</p>
         <div class="member-fields">
           <label for="profile-firstName">Prénom<input id="profile-firstName" v-model="form.firstName" autocomplete="given-name" required maxlength="80" :disabled="busy||!interactive"></label>
@@ -45,7 +46,8 @@ useSeoMeta({title:'Mon profil — Vertical Côtière',robots:'noindex, nofollow'
       </form>
       <aside class="member-sidebar">
         <section class="member-panel"><h2>Mon rôle</h2><p>{{profile?.role==='contributor'?'Contributeur':'Utilisateur basique'}}</p><p>{{profile?.role==='contributor'?'Vous pouvez créer, modifier et publier vos propres publications avec l’assistant IA.':'Vous pouvez consulter et modifier votre profil. Pour contribuer, contactez le club.'}}</p></section>
-        <form class="member-panel member-form" @submit.prevent="changePassword">
+        <section v-if="profile?.googleConnected" class="member-panel"><h2>Connexion Google</h2><p>Votre compte est associé à Google.</p><p v-if="!profile.hasPassword">Pour utiliser aussi un mot de passe, <NuxtLink to="/mot-de-passe-oublie">demandez un lien pour en définir un</NuxtLink>.</p></section>
+        <form v-if="profile?.hasPassword" class="member-panel member-form" @submit.prevent="changePassword">
           <h2>Changer mon mot de passe</h2>
           <p v-if="passwordError" class="member-error" role="alert">{{passwordError}}</p><p v-if="passwordMessage" class="member-success" role="status">{{passwordMessage}}</p>
           <label for="current-password">Mot de passe actuel<input id="current-password" v-model="passwords.currentPassword" type="password" autocomplete="current-password" required :disabled="passwordBusy||!interactive"></label>

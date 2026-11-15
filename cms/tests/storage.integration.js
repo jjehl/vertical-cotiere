@@ -1,9 +1,8 @@
 // Run locally: docker compose run --rm --no-deps cms node tests/storage.integration.js
 const assert = require('node:assert/strict');
 const { Readable } = require('node:stream');
+const { env } = require('@strapi/utils');
 const createConfig = require('../config/plugins');
-const env = (key, fallback) => process.env[key] ?? fallback;
-env.bool = (key, fallback) => process.env[key] === undefined ? fallback : process.env[key] === 'true';
 (async () => {
   const options = createConfig({ env }).upload.config.providerOptions;
   const provider = require('@strapi/provider-upload-aws-s3').init(options);

@@ -108,6 +108,11 @@ créer le compte administrateur Strapi sur chaque domaine CMS puis organiser la
 restauration/import des contenus et médias. La migration éditoriale initiale doit
 être traitée séparément, sans exposer un montage arbitraire au compte CI.
 
+Pour transférer ensuite les publications et leurs fichiers entre `local`, `re7`
+et `prod`, dans le sens choisi, utiliser la [synchronisation par API](16-synchronisation-publications.md).
+Elle est lancée manuellement depuis le poste administrateur avec `--from` et
+`--to` et conserve les contenus propres à la cible ainsi que ses utilisateurs.
+
 Les migrations internes Strapi peuvent s'exécuter au démarrage. Un dump PostgreSQL
 local est réalisé après démarrage/contrôle de PostgreSQL et avant le nouveau CMS. Il ne remplace
 pas une sauvegarde externe OVH ni une sauvegarde des uploads. Surveiller le disque.

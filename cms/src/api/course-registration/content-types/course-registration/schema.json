@@ -1,0 +1,121 @@
+{
+  "kind": "collectionType",
+  "collectionName": "course_registrations",
+  "info": {
+    "singularName": "course-registration",
+    "pluralName": "course-registrations",
+    "displayName": "Inscriptions aux cours",
+    "description": "Réservations et paiements HelloAsso. Ne libérer une place qu’après vérification du paiement."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "reference": {
+      "type": "string",
+      "unique": true,
+      "required": true
+    },
+    "sessionHash": {
+      "type": "string",
+      "private": true
+    },
+    "participantKey": {
+      "type": "string",
+      "private": true
+    },
+    "season": {
+      "type": "string",
+      "required": true
+    },
+    "slotCode": {
+      "type": "string",
+      "required": true
+    },
+    "slotLabel": {
+      "type": "string",
+      "required": true
+    },
+    "firstName": {
+      "type": "string",
+      "required": true
+    },
+    "lastName": {
+      "type": "string",
+      "required": true
+    },
+    "birthDate": {
+      "type": "date",
+      "required": true
+    },
+    "email": {
+      "type": "email",
+      "required": true
+    },
+    "payerFirstName": {
+      "type": "string",
+      "required": true
+    },
+    "payerLastName": {
+      "type": "string",
+      "required": true
+    },
+    "address": {
+      "type": "text",
+      "required": true
+    },
+    "promoCode": {
+      "type": "string"
+    },
+    "familyReference": {
+      "type": "string"
+    },
+    "amountCents": {
+      "type": "integer",
+      "min": 1,
+      "required": true
+    },
+    "registrationStatus": {
+      "type": "enumeration",
+      "enum": [
+        "creating",
+        "pending",
+        "confirmed",
+        "cancelled"
+      ],
+      "default": "creating",
+      "required": true
+    },
+    "checkoutIntentId": {
+      "type": "string",
+      "unique": true
+    },
+    "checkoutUrl": {
+      "type": "text",
+      "private": true
+    },
+    "checkoutCreatedAt": {
+      "type": "datetime"
+    },
+    "confirmedAt": {
+      "type": "datetime"
+    },
+    "payer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "member": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "payerEmail": {
+      "type": "email"
+    },
+    "memberCreated": {
+      "type": "boolean",
+      "default": false
+    }
+  }
+}

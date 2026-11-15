@@ -12,25 +12,45 @@ async function assistant(ctx,action) {
   member(ctx,true);ctx.state.memberMode=true;
   return strapi.plugin('publication-assistant').controller('assistant')[action](ctx);
 }
+async function uploadPhotos(ctx,user,publicationDocumentId=null) {
+  const files=[ctx.request.files?.files].flat().filter(Boolean);
+  if(!files.length||files.length>30)throw new errors.ValidationError('Sélectionner entre 1 et 30 photos.');
+  if(files.reduce((total,file)=>total+file.size,0)>25*1024*1024)throw new errors.ValidationError('Importer au maximum 25 Mo de photos à la fois.');
+  const sharp=require('sharp');const formats={jpeg:'image/jpeg',png:'image/png',webp:'image/webp',avif:'image/avif'};
+  for(const file of files) {
+    if(file.size>20*1024*1024)throw new errors.ValidationError('Une photo ne doit pas dépasser 20 Mo.');
+    let metadata;try{metadata=await sharp(file.filepath,{limitInputPixels:40000000}).metadata();}catch{throw new errors.ValidationError('Photo invalide. Formats : JPEG, PNG, WebP ou AVIF.');}
+    if(!formats[metadata.format]||!metadata.width||!metadata.height||metadata.width*metadata.height>40000000)throw new errors.ValidationError('Format ou dimensions de photo non pris en charge.');
+    file.mimetype=formats[metadata.format];
+  }
+  const service=strapi.plugin('upload').service('upload');let uploaded=[];
+  try {
+    uploaded=await service.upload({data:{},files});
+    for(const file of uploaded)await strapi.db.query('api::member-upload.member-upload').create({data:{owner:user.id,file:file.id,publicationDocumentId}});
+    ctx.body=uploaded.map(({id,name,url})=>({id,name,url}));
+  }catch(error){for(const file of uploaded)await service.remove(file).catch(()=>{});throw error;}
+}
 module.exports={
+  async participationPoll(ctx){return require('../../../lib/participation-polls').read(strapi,ctx,member(ctx));},
+  async createParticipationPoll(ctx){return require('../../../lib/participation-polls').create(strapi,ctx,member(ctx,true));},
+  async registerParticipation(ctx){return require('../../../lib/participation-polls').register(strapi,ctx,member(ctx));},
+  async searchParticipationMembers(ctx){member(ctx);return require('../../../lib/participation-polls').searchMembers(strapi,ctx);},
   async me(ctx){ctx.set('Cache-Control','private, no-store');ctx.body=profile(member(ctx));},
   async updateProfile(ctx){
     const user=member(ctx);const data=validateProfile(ctx.request.body);
-    if(data.email&&data.email!==user.email) {
-      const duplicate=await strapi.db.query('plugin::users-permissions.user').findOne({where:{id:{$ne:user.id},$or:[{email:data.email},{username:data.email}]}});
-      if(duplicate)throw new errors.ValidationError('Cette adresse e-mail est déjà utilisée.');
-      data.username=data.email;
-    }
-    try{ctx.body=profile(await strapi.plugin('users-permissions').service('user').edit(user.id,data));}
-    catch(error){if(error.code==='23505'||error.cause?.code==='23505')throw new errors.ValidationError('Cette adresse e-mail est déjà utilisée.');throw error;}
+    const emailChanged=data.email&&data.email.toLowerCase()!==user.email.toLowerCase();
+    const service=strapi.plugin('users-permissions').service('user');
+    const updated=await service.edit(user.id,{...data,...(emailChanged?{confirmed:false}:{} )});
+    if(emailChanged)await service.sendConfirmationEmail(updated);
+    ctx.body=profile(updated);
   },
   async password(ctx){member(ctx);return strapi.plugin('users-permissions').controller('auth').changePassword(ctx);},
   async publications(ctx){
     const user=member(ctx,true);
-    const rows=await strapi.documents(uid).findMany({status:'draft',filters:{memberAuthor:{id:user.id}},fields:['documentId','title','updatedAt'],sort:'updatedAt:desc',limit:200});
-    const published=await strapi.documents(uid).findMany({status:'published',filters:{memberAuthor:{id:user.id}},fields:['documentId'],limit:200});
-    const ids=new Set(published.map(row=>row.documentId));
-    ctx.body=rows.map(row=>({documentId:row.documentId,title:row.title,updatedAt:row.updatedAt,published:ids.has(row.documentId)}));
+    const rows=await strapi.documents(uid).findMany({status:'draft',filters:{memberAuthor:{id:user.id}},fields:['documentId','title','body','category','updatedAt'],sort:'updatedAt:desc',limit:200});
+    const published=await strapi.documents(uid).findMany({status:'published',filters:{memberAuthor:{id:user.id}},fields:['documentId','slug'],limit:200});
+    const urls=new Map(published.map(row=>[row.documentId,'/vie-du-club/'+encodeURIComponent(row.slug)]));
+    ctx.body=rows.map(row=>({documentId:row.documentId,title:row.title,body:row.body||'',category:row.category,updatedAt:row.updatedAt,published:urls.has(row.documentId),url:urls.get(row.documentId)||null}));
   },
   async photo(ctx){
     const user=member(ctx,true);const id=Number(ctx.params.id);
@@ -43,22 +63,32 @@ module.exports={
     ctx.body={id:file.id,name:file.name,mime:file.mime,storageUrl:file.url};
   },
   async photos(ctx){
-    const user=member(ctx,true);const files=[ctx.request.files?.files].flat().filter(Boolean);
-    if(!files.length||files.length>30)throw new errors.ValidationError('Sélectionner entre 1 et 30 photos.');
-    if(files.reduce((total,file)=>total+file.size,0)>25*1024*1024)throw new errors.ValidationError('Importer au maximum 25 Mo de photos à la fois.');
-    const sharp=require('sharp');const formats={jpeg:'image/jpeg',png:'image/png',webp:'image/webp',avif:'image/avif'};
-    for(const file of files) {
-      if(file.size>20*1024*1024)throw new errors.ValidationError('Une photo ne doit pas dépasser 20 Mo.');
-      let metadata;try{metadata=await sharp(file.filepath,{limitInputPixels:40000000}).metadata();}catch{throw new errors.ValidationError('Photo invalide. Formats : JPEG, PNG, WebP ou AVIF.');}
-      if(!formats[metadata.format]||!metadata.width||!metadata.height||metadata.width*metadata.height>40000000)throw new errors.ValidationError('Format ou dimensions de photo non pris en charge.');
-      file.mimetype=formats[metadata.format];
-    }
-    const service=strapi.plugin('upload').service('upload');let uploaded=[];
-    try {
-      uploaded=await service.upload({data:{},files});
-      for(const file of uploaded)await strapi.db.query('api::member-upload.member-upload').create({data:{owner:user.id,file:file.id}});
-      ctx.body=uploaded.map(({id,name,url})=>({id,name,url}));
-    }catch(error){for(const file of uploaded)await service.remove(file).catch(()=>{});throw error;}
+    return uploadPhotos(ctx,member(ctx,true));
+  },
+  async publicationPhotos(ctx){
+    const user=member(ctx,true);
+    const publication=await strapi.documents(uid).findFirst({status:'published',filters:{slug:ctx.params.slug},fields:['documentId']});
+    if(!publication)return ctx.notFound('Publication introuvable.');
+    return uploadPhotos(ctx,user,publication.documentId);
+  },
+  async publicationPhotoIds(ctx){
+    const user=member(ctx);
+    const publication=await strapi.documents(uid).findFirst({status:'published',filters:{slug:ctx.params.slug},fields:['documentId']});
+    if(!publication)return ctx.notFound('Publication introuvable.');
+    const uploads=await strapi.db.query('api::member-upload.member-upload').findMany({where:{owner:user.id,publicationDocumentId:publication.documentId},populate:{file:{select:['id']}}});
+    ctx.body={ids:uploads.filter(upload=>upload.file).map(upload=>upload.file.id)};
+  },
+  async deletePublicationPhoto(ctx){
+    const user=member(ctx);const id=Number(ctx.params.id);
+    if(!Number.isSafeInteger(id)||id<1)return ctx.notFound('Photo introuvable.');
+    const publication=await strapi.documents(uid).findFirst({status:'published',filters:{slug:ctx.params.slug},fields:['documentId']});
+    if(!publication)return ctx.notFound('Publication introuvable.');
+    const uploads=strapi.db.query('api::member-upload.member-upload');
+    const upload=await uploads.findOne({where:{owner:user.id,file:id,publicationDocumentId:publication.documentId},populate:{file:true}});
+    if(!upload?.file)return ctx.notFound('Photo introuvable.');
+    await strapi.plugin('upload').service('upload').remove(upload.file);
+    await uploads.delete({where:{id:upload.id}});
+    ctx.body={ok:true};
   },
   assistantStatus:ctx=>assistant(ctx,'status'),assistantPublication:ctx=>assistant(ctx,'publication'),
   assistantPrepare:ctx=>assistant(ctx,'prepare'),assistantConfirm:ctx=>assistant(ctx,'confirm'),

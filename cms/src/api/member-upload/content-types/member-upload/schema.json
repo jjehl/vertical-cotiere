@@ -6,6 +6,7 @@
   "pluginOptions":{"content-manager":{"visible":false},"content-type-builder":{"visible":false}},
   "attributes":{
     "owner":{"type":"relation","relation":"manyToOne","target":"plugin::users-permissions.user","private":true},
-    "file":{"type":"relation","relation":"oneToOne","target":"plugin::upload.file"}
+    "file":{"type":"relation","relation":"oneToOne","target":"plugin::upload.file"},
+    "publicationDocumentId":{"type":"string","private":true}
   }
 }

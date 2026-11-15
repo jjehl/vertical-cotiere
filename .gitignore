@@ -9,6 +9,7 @@ build/
 .env.*
 !.env.example
 !.env.production.example
+!.env.content-sync.example
 cms/public/uploads/*
 !cms/public/uploads/.gitkeep
 cms/.tmp/

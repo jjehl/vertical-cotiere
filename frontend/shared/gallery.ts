@@ -6,6 +6,7 @@ export interface AlbumPhoto {
   thumb: string;
   width: number;
   height: number;
+  addedBy?: string;
 }
 export interface AlbumSummary {
   slug: string;

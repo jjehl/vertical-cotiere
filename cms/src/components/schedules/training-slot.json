@@ -43,6 +43,34 @@
     "supervised": {
       "type": "boolean",
       "default": true
+    },
+    "registrationCode": {
+      "type": "string"
+    },
+    "registrationEnabled": {
+      "type": "boolean",
+      "default": false
+    },
+    "occupiedPlaces": {
+      "type": "integer",
+      "min": 0,
+      "default": 0
+    },
+    "priceCents": {
+      "type": "integer",
+      "min": 1
+    },
+    "ccmpPriceCents": {
+      "type": "integer",
+      "min": 1
+    },
+    "familyPriceCents": {
+      "type": "integer",
+      "min": 1
+    },
+    "ccmpFamilyPriceCents": {
+      "type": "integer",
+      "min": 1
     }
   }
 }

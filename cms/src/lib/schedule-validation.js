@@ -6,7 +6,21 @@ function validateTimetable(data) {
   const times=(item,label)=>{
     if(item.start&&item.end&&seconds(item.end)<=seconds(item.start))fail(`${label} : l’heure de fin doit suivre l’heure de début.`);
   };
-  for(const slot of data.sessions||[])times(slot,slot.label||'Créneau');
+  const codes=new Set();
+  for(const slot of data.sessions||[]) {
+    times(slot,slot.label||'Créneau');
+    if(slot.registrationCode){
+      if(!/^[a-zA-Z0-9_-]{1,100}$/.test(slot.registrationCode))fail('L’identifiant d’inscription doit contenir uniquement des lettres, chiffres, tirets ou traits de soulignement.');
+      if(codes.has(slot.registrationCode))fail('Chaque cours doit avoir un identifiant d’inscription distinct.');
+      codes.add(slot.registrationCode);
+    }
+    if(slot.registrationEnabled) {
+      if(!slot.registrationCode)fail('Renseignez un identifiant permanent avant d’ouvrir les inscriptions à ce cours.');
+      if(!Number.isSafeInteger(slot.capacity)||slot.capacity<1)fail('Renseignez la capacité avant d’ouvrir les inscriptions à ce cours.');
+      if(!Number.isSafeInteger(slot.priceCents)||slot.priceCents<1)fail('Renseignez le tarif standard en centimes avant d’ouvrir les inscriptions à ce cours.');
+    }
+    if((slot.occupiedPlaces||0)>(slot.capacity??Infinity))fail('Le nombre de places déjà occupées dépasse la capacité du cours.');
+  }
   const calendar=data.ufraps;if(!calendar)return;
   times(calendar,'UFRAPS');
   if(calendar.opens&&calendar.closes&&calendar.closes<calendar.opens)fail('UFRAPS : la fin de saison doit suivre son ouverture.');

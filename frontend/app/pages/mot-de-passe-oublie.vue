@@ -14,7 +14,7 @@ useSeoMeta({title:'Mot de passe oublié — Vertical Côtière',robots:'noindex,
   <MemberAuthLayout>
     <span class="eyebrow">Un nouveau départ</span><h1>Un oubli,<br><em>ça arrive.</em></h1>
     <p class="auth-intro">Indiquez votre adresse e-mail pour recevoir un lien et choisir un nouveau mot de passe.</p>
-    <div v-if="sent" class="auth-confirmation" role="status"><span class="auth-confirmation-icon" aria-hidden="true">↗</span><h2>Consultez vos e-mails</h2><p>Si un compte correspond à cette adresse, vous recevrez un lien valable une heure. Pensez à vérifier vos courriers indésirables.</p></div>
+    <div v-if="sent" class="auth-confirmation" role="status"><span class="auth-confirmation-icon" aria-hidden="true">↗</span><h2>Consultez vos e-mails</h2><p>Si un compte correspond à cette adresse, vous recevrez un lien valable une heure. Si plusieurs comptes la partagent, un e-mail distinct indique l’identifiant de chaque compte. Pensez à vérifier vos courriers indésirables.</p></div>
     <form v-else class="auth-form" @submit.prevent="requestReset">
       <p v-if="error" class="member-error" role="alert">{{error}}</p>
       <div class="auth-field"><label for="forgot-email">Adresse e-mail</label><input id="forgot-email" v-model="email" type="email" autocomplete="email" placeholder="vous@exemple.fr" required maxlength="254" :disabled="busy||!interactive"></div>

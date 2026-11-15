@@ -1,0 +1,14 @@
+{
+  "kind":"collectionType",
+  "collectionName":"event_participations",
+  "info":{"singularName":"event-participation","pluralName":"event-participations","displayName":"Participation à un événement"},
+  "options":{"draftAndPublish":false},
+  "pluginOptions":{"content-manager":{"visible":false},"content-type-builder":{"visible":false}},
+  "attributes":{
+    "registrationKey":{"type":"string","required":true,"unique":true,"column":{"unique":true,"notNullable":true},"private":true},
+    "poll":{"type":"relation","relation":"manyToOne","target":"api::participation-poll.participation-poll","required":true,"private":true},
+    "member":{"type":"relation","relation":"manyToOne","target":"plugin::users-permissions.user","required":true,"private":true},
+    "registeredByMember":{"type":"relation","relation":"manyToOne","target":"plugin::users-permissions.user","required":true,"private":true},
+    "confirmedAt":{"type":"datetime","required":true,"private":true}
+  }
+}

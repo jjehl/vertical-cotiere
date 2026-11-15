@@ -1,4 +1,5 @@
 const {errors}=require('@strapi/utils');
+const {randomBytes}=require('node:crypto');
 const uid='plugin::users-permissions.user';
 module.exports=function extendPasswordReset(plugin) {
   const userService=plugin.services.user;
@@ -22,7 +23,23 @@ module.exports=function extendPasswordReset(plugin) {
         if(!smtp?.host||!smtp.auth?.user||!smtp.auth?.pass)ctx.throw(503,'L’envoi des e-mails n’est pas encore configuré.');
         const settings=await strapi.store({type:'plugin',name:'users-permissions',key:'advanced'}).get();
         if(!settings?.email_reset_password)ctx.throw(503,'Le lien de récupération n’est pas encore configuré.');
-        return controller.forgotPassword(ctx);
+        const {email}=ctx.request.body||{};
+        if(typeof email!=='string'||email.length>254||!/^\S+@\S+\.\S+$/.test(email.trim()))throw new errors.ValidationError('Adresse e-mail invalide.');
+        const users=await strapi.db.query(uid).findMany({where:{email:{$eqi:email.trim()},provider:'local',blocked:false}});
+        const emails=await strapi.store({type:'plugin',name:'users-permissions',key:'email'}).get();
+        const template=emails.reset_password.options;
+        const service=strapi.plugin('users-permissions').service('users-permissions');
+        for(const user of users) {
+          const token=randomBytes(64).toString('hex');
+          const sanitized=await strapi.contentAPI.sanitize.output(user,strapi.getModel(uid),{auth:ctx.state.auth});
+          const values={URL:settings.email_reset_password,SERVER_URL:strapi.config.get('server.absoluteUrl'),ADMIN_URL:strapi.config.get('admin.absoluteUrl'),USER:sanitized,TOKEN:token};
+          const escape=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+          const message='<p>Compte : <strong>'+escape(user.username)+'</strong></p>'+await service.template(template.message,values);
+          const subject=await service.template(template.object,values);
+          await strapi.plugin('users-permissions').service('user').edit(user.id,{resetPasswordToken:token});
+          await strapi.plugin('email').service('email').send({to:user.email,from:template.from?.email?`${template.from.name||''} <${template.from.email}>`:undefined,replyTo:template.response_email,subject,text:message,html:message});
+        }
+        return ctx.send({ok:true});
       },
       async resetPassword(ctx) {
         const {code}=ctx.request.body||{};

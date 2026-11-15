@@ -50,12 +50,15 @@ export interface PublicationSummary {
   meeting:ClubEvent|null;
 }
 export interface Publication extends PublicationSummary {
+  hasParticipationPoll?:boolean;
   body:string;
   bodyHtml:string;
   photos:import('./gallery').AlbumPhoto[];
   attachments:MediaFile[];
 }
 export interface TrainingSlot {
+  code?: string;
+  remaining?: number | null;
   day: number;
   label: string;
   start: string;

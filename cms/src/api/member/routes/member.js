@@ -1,6 +1,13 @@
 module.exports={routes:[
   ['GET','/member/me','me'],['PUT','/member/profile','updateProfile'],['POST','/member/password','password'],
   ['GET','/member/publications','publications'],['POST','/member/photos','photos'],['GET','/member/photos/:id','photo'],
+  ['POST','/member/publications/:slug/photos','publicationPhotos'],
+  ['GET','/member/publications/:slug/photos','publicationPhotoIds'],
+  ['DELETE','/member/publications/:slug/photos/:id','deletePublicationPhoto'],
+  ['GET','/member/publications/:slug/poll','participationPoll'],
+  ['POST','/member/publications/:slug/poll','createParticipationPoll'],
+  ['POST','/member/publications/:slug/poll/register','registerParticipation'],
+  ['GET','/member/publications/:slug/poll/members','searchParticipationMembers'],
   ['GET','/member/assistant/status','assistantStatus'],['GET','/member/assistant/publications/:documentId','assistantPublication'],
   ['POST','/member/assistant/prepare','assistantPrepare'],['POST','/member/assistant/confirm','assistantConfirm'],
 ].map(([method,path,action])=>({method,path,handler:'member.'+action,config:{auth:{scope:['api::member.member.'+action]}}}))};

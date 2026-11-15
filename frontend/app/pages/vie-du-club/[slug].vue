@@ -1,10 +1,22 @@
 <script setup lang="ts">
 import {dateLabel,eventDateLabel,canParticipate} from '#shared/dates';
 const route=useRoute();
+const {profile,api,refresh:refreshMember}=useMember();
+const memberReady=ref(false);
+const ownPhotoIds=ref<number[]>([]);const photoMessage=ref('');
+const canAddPhotos=computed(()=>memberReady.value&&profile.value?.role==='contributor');
+async function refreshPhotoOwnership(){
+  if(!profile.value){ownPhotoIds.value=[];return;}
+  try{ownPhotoIds.value=(await api<{ids:number[]}>('/api/member/publications/'+encodeURIComponent(String(route.params.slug))+'/photos')).ids;}
+  catch{ownPhotoIds.value=[];}
+}
+onMounted(async()=>{try{await refreshMember();await refreshPhotoOwnership();}catch{}finally{memberReady.value=true;}});
 const {data:publication,error,refresh}=await useFetch(`/api/publications/${encodeURIComponent(String(route.params.slug))}`);
 if(error.value?.statusCode===404)throw createError({statusCode:404,statusMessage:'Publication introuvable'});
 const meeting=computed(()=>publication.value?.meeting);
 const photos=computed(()=>publication.value?.photos.filter(p=>!publication.value?.bodyHtml.includes(p.src+'"')&&!publication.value?.bodyHtml.includes(p.src+"'"))||[]);
+async function refreshPhotos(){await refresh();await refreshPhotoOwnership();}
+async function photoDeleted(){photoMessage.value='Votre photo a été supprimée.';await refreshPhotos();}
 useSeoMeta({title:()=>`${publication.value?.title||'La vie du club'} — Vertical Côtière`,description:()=>publication.value?.summary});
 </script>
 <template>
@@ -19,18 +31,28 @@ useSeoMeta({title:()=>`${publication.value?.title||'La vie du club'} — Vertica
           <img v-if="publication.image&&!publication.photos.length" class="article-cover" :src="publication.image" :alt="publication.imageAlt" :style="{objectPosition:publication.imagePosition}" width="1200" height="700">
           <ImportedContent v-if="publication.bodyHtml" :html="publication.bodyHtml"/>
           <div v-else class="prose publication-text"><p v-for="(paragraph,i) in publication.body.split('\n\n')" :key="i">{{paragraph}}</p></div>
-          <PublicationGallery :photos="photos"/>
+          <PublicationGallery :photos="photos" :show-empty="canAddPhotos">
+            <template #actions><PublicationPhotoUpload v-if="canAddPhotos" :slug="publication.slug" @uploaded="photoMessage='';refreshPhotos()"/></template>
+            <template #photo-actions="{photo}"><PublicationPhotoDelete v-if="ownPhotoIds.includes(photo.id)" :key="photo.id" :slug="publication.slug" :photo-id="photo.id" @deleted="photoDeleted"/></template>
+          </PublicationGallery>
+          <p v-if="photoMessage" class="fine-print" role="status">{{photoMessage}}</p>
           <ContentAttachments :files="publication.attachments" :html="publication.bodyHtml"/>
         </div>
         <aside v-if="meeting" class="event-aside">
-          <span class="eyebrow">Le rendez-vous</span><h2>{{eventDateLabel(meeting)}}</h2>
+          <PublicationParticipation :key="publication.slug" :slug="publication.slug" :member-ready="memberReady" :has-poll="publication.hasParticipationPoll">
+          <div class="event-meeting-details">
+          <h2>{{eventDateLabel(meeting)}}</h2>
           <p v-if="meeting.allDay">Toute la journée</p><p v-else>{{dateLabel(meeting.start,{hour:'2-digit',minute:'2-digit'})}}<template v-if="meeting.end!==meeting.start"> – {{dateLabel(meeting.end,{hour:'2-digit',minute:'2-digit'})}}</template></p>
-          <p v-if="meeting.location">{{meeting.location}}</p><span class="pill">{{meeting.eventState}}</span>
+          <p v-if="meeting.location">{{meeting.location}}</p><span v-if="meeting.eventState!=='prévu'" class="pill">{{meeting.eventState}}</span>
+          </div>
           <a v-if="canParticipate(meeting)" :href="meeting.participationUrl" class="button button-orange" target="_blank" rel="noopener noreferrer">{{meeting.participationLabel||'Participer'}} <ArrowIcon/></a>
           <p v-else-if="meeting.participationUrl">Les participations sont closes.</p>
           <p v-if="meeting.deadline" class="fine-print">Avant le {{dateLabel(meeting.deadline)}}</p>
-          <a :href="`/api/agenda.ics?evenement=${encodeURIComponent(publication.slug)}`" class="text-link" download>Ajouter à mon calendrier <ArrowIcon/></a>
-          <NuxtLink to="/agenda" class="text-link">Voir l’agenda <ArrowIcon/></NuxtLink>
+          <nav class="event-secondary-links" aria-label="Calendrier du rendez-vous">
+            <a :href="`/api/agenda.ics?evenement=${encodeURIComponent(publication.slug)}`" download>Ajouter à mon calendrier</a>
+            <NuxtLink to="/agenda">Voir l’agenda</NuxtLink>
+          </nav>
+          </PublicationParticipation>
         </aside>
       </div>
     </article>

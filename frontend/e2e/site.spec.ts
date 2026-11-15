@@ -41,7 +41,16 @@ test('contenus du CMS, navigation et recherche agenda', async ({ page, request }
   await page.getByRole('button', { name: 'Mois', exact: true }).click()
   await expect(page.getByLabel('Calendrier mensuel')).toBeVisible()
   await page.goto('/inscriptions')
-  await expect(page.getByRole('link', { name: 'S’inscrire sur HelloAsso' })).toHaveAttribute('href', /helloasso.com/)
+  const catalogResponse = await request.get('/api/registrations')
+  expect(catalogResponse.ok()).toBeTruthy()
+  const catalog = await catalogResponse.json()
+  expect(catalog.sessions.length).toBeGreaterThan(0)
+  await expect(page.getByRole('list', { name: 'Étapes de l’inscription' })).toContainText('Payer avec HelloAsso')
+  await expect(page.locator('.training-session')).toHaveCount(catalog.sessions.length)
+  await expect(page.getByRole('heading', { name: 'Un compte validé pour s’inscrire' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Continuer vers le paiement', exact: true })).toHaveCount(0)
+  await page.getByRole('link', { name: 'Se connecter', exact: true }).click()
+  await expect(page).toHaveURL(url => url.pathname === '/connexion' && url.searchParams.get('retour') === '/inscriptions')
 })
 
 test('navigation mobile, absence de débordement et liens de pied de page', async ({ page }) => {

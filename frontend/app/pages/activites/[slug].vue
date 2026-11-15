@@ -44,7 +44,7 @@ useSeoMeta({
           <div class="inline-actions">
             <NuxtLink to="/inscriptions" class="button button-dark"
               >Comment s’inscrire <ArrowIcon /></NuxtLink
-            ><NuxtLink to="/agenda" class="text-link"
+            ><NuxtLink :to="activity.slug === 'competition' ? {path:'/agenda',query:{categorie:'Compétition'}} : '/agenda'" class="text-link"
               >Les rendez-vous <ArrowIcon
             /></NuxtLink>
           </div>
@@ -54,10 +54,8 @@ useSeoMeta({
       <h2>Pour préparer la suite.</h2>
       <div class="resource-links">
         <template v-if="activity.slug === 'competition'"
-          ><NuxtLink to="/ressources/competition"
-            >La compétition au club <ArrowIcon /></NuxtLink
           ><NuxtLink to="/ressources/coupe-de-lain"
-            >Coupe de l’Ain <ArrowIcon /></NuxtLink
+            >La compétition au club <ArrowIcon /></NuxtLink
           ><NuxtLink to="/ressources/equipe-departementale"
             >Équipe départementale <ArrowIcon /></NuxtLink></template
         ><template v-else-if="activity.slug === 'sorties-nature'"
@@ -70,7 +68,7 @@ useSeoMeta({
             >Tous les horaires <ArrowIcon /></NuxtLink
           ><NuxtLink to="/ressources/baby-escalade"
             >Baby escalade <ArrowIcon /></NuxtLink
-          ><NuxtLink to="/ressources/stages">Stages <ArrowIcon /></NuxtLink
+          ><NuxtLink :to="{path:'/agenda',query:{categorie:'Stage'}}">Les stages à venir <ArrowIcon /></NuxtLink
           ><NuxtLink to="/ressources/location-chaussons"
             >Location de chaussons <ArrowIcon /></NuxtLink
         ></template>

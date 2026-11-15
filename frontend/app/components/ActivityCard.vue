@@ -3,7 +3,7 @@ import type { Activity } from "#shared/types";
 defineProps<{ activity: Activity; index: number }>();
 </script>
 <template>
-  <NuxtLink :to="`/activites/${activity.slug}`" class="activity-card">
+  <NuxtLink :to="activity.slug === 'cours-escalade' ? '/horaires-et-acces' : `/activites/${activity.slug}`" class="activity-card">
     <div class="activity-photo">
       <img
         v-if="activity.image"

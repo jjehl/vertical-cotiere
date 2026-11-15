@@ -1,0 +1,11 @@
+{
+  "kind":"collectionType",
+  "collectionName":"member_uploads",
+  "info":{"singularName":"member-upload","pluralName":"member-uploads","displayName":"Téléversement membre"},
+  "options":{"draftAndPublish":false},
+  "pluginOptions":{"content-manager":{"visible":false},"content-type-builder":{"visible":false}},
+  "attributes":{
+    "owner":{"type":"relation","relation":"manyToOne","target":"plugin::users-permissions.user","private":true},
+    "file":{"type":"relation","relation":"oneToOne","target":"plugin::upload.file"}
+  }
+}

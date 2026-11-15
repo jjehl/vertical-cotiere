@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import '~/assets/css/member.css';
 import { featuredPartners } from '~/data/partners';
 const menuOpen = ref(false);
 const hydrated = ref(false);
@@ -16,6 +17,7 @@ const links = [
   { to: "/le-club", label: "Le club" },
   { to: "/agenda", label: "L’agenda" },
   { to: "/vie-du-club", label: "La vie du club" },
+  { to: "/compte", label: "Espace membre" },
 ];
 </script>
 <template>
@@ -75,14 +77,14 @@ const links = [
           <h2>La vie verticale</h2>
           <NuxtLink to="/activites/competition">La compétition</NuxtLink
           ><NuxtLink to="/activites/sorties-nature">Les sorties nature</NuxtLink
-          ><NuxtLink to="/activites/cours-escalade"
+          ><NuxtLink to="/horaires-et-acces"
             >Les cours d’escalade</NuxtLink
           ><NuxtLink to="/agenda">L’agenda</NuxtLink
           ><NuxtLink to="/vie-du-club">La vie du club</NuxtLink>
         </div>
         <div>
           <h2>Les bons repères</h2>
-          <NuxtLink to="/horaires-et-acces">Horaires & accès</NuxtLink
+          <NuxtLink to="/horaires-et-acces">Cours, horaires & accès</NuxtLink
           ><NuxtLink to="/inscriptions">Inscriptions</NuxtLink
           ><NuxtLink to="/le-club">L’association</NuxtLink
           ><NuxtLink to="/contact">Nous contacter</NuxtLink

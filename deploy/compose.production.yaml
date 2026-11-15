@@ -41,7 +41,14 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Secret requis}
       JWT_SECRET: ${JWT_SECRET:?Secret requis}
       MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
-      MISTRAL_MODEL: ${MISTRAL_MODEL:-ministral-8b-2512}
+      MISTRAL_MODEL: ${MISTRAL_MODEL:-mistral-large-4}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:?URL publique du site requise pour les e-mails}
+      SMTP_HOST: ${SMTP_HOST:-ssl0.ovh.net}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
       PUBLIC_CMS_URL: ${PUBLIC_CMS_URL:-http://localhost:1337}
       SEED_CONTENT: ${SEED_CONTENT:-false}
       IMPORT_MEDIA: ${IMPORT_MEDIA:-false}

@@ -2113,6 +2113,7 @@ em {
 .publication-card-text{background:#edf0e5;padding:25px}
 .publication-card-text .news-meta{margin-top:0}
 .publication-more{display:flex;justify-content:center;margin-top:40px}
+.publication-page h1{font-size:clamp(30px,4vw,52px);line-height:1.15;letter-spacing:-.035em;overflow-wrap:anywhere}
 .publication-content{min-width:0}
 .publication-text{white-space:pre-line}
 .publication-gallery{margin-top:36px}

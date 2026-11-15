@@ -85,17 +85,28 @@ Dans **Content Manager → Single Types → Horaires et UFRAPS** :
 - **Jours de fermeture exceptionnels** : une date et un motif par jour, notamment jours fériés et ponts.
 - **Plannings et documents joints** : fichiers complémentaires consultables sur la page des horaires.
 
-Sur la page des horaires, les cours sont présentés en **semaine type** : jours en
-colonnes et échelle horaire commune sur ordinateur, puis jours successifs sur
-mobile. Les séances encadrées, compétition et pratique autonome sont distinguées
-par leur couleur et leur libellé. Un clic sur un créneau ouvre son détail :
-public, années de naissance, capacité et encadrement. Les cours simultanés sont
-placés côte à côte. Un dimanche apparaît si un créneau y est publié.
+La page **Cours, horaires & accès** (`/horaires-et-acces`) regroupe la présentation
+des cours, les lieux et leurs itinéraires, la semaine type et les ouvertures UFRAPS.
+L’ancienne adresse `/activites/cours-escalade` redirige vers cette page commune.
 
-La semaine est triée par jour et heure ; le tableau détaillé, accessible sous
-« Consulter tous les détails en tableau », conserve l’ordre du formulaire. Les
-deux vues lisent les mêmes données Strapi, sans double saisie. Le nombre de places
+La photo de la carte des cours sur l’accueil est reprise en petit format à côté
+du titre. Elle reste gérée dans la fiche Activité, avec son texte alternatif et
+son point focal.
+
+La semaine type utilise une échelle horaire commune à tous les jours, avec des
+repères à la demi-heure. Les créneaux démarrant à la même heure sont alignés et
+leur hauteur correspond à leur durée. Les cours simultanés se partagent la
+largeur du jour. Le planning reste compact ; sur mobile, il défile horizontalement
+et la colonne des heures reste visible.
+Les séances encadrées, compétition et pratique autonome sont distinguées par
+leur couleur et leur libellé. Un clic ouvre le détail : public, années de
+naissance, capacité et encadrement. Un dimanche apparaît si un créneau y est
+publié. Le tableau récapitulatif en double a été retiré. Le nombre de places
 correspond à la capacité annoncée, pas à un compteur de places restantes.
+
+La ressource « Stages » a été retirée du site ; son ancienne adresse renvoie
+vers l’agenda filtré sur **Stage**. Son contenu historique est conservé en brouillon
+Strapi et ne doit pas être republié.
 
 Laisser le nombre de places vide lorsqu’il n’est pas précisé. Pour une période allant du lundi au
 dimanche inclus, indiquer ces deux dates ; l’ouverture suivante dépend ensuite du

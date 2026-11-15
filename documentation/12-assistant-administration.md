@@ -29,34 +29,44 @@ nombre le sont. Les fichiers suivent ensuite les mêmes règles de publication
 que les autres médias du site. Retirer une photo de la sélection ne supprime pas
 le fichier de la médiathèque.
 
-Cette première version crée de nouvelles publications. Les corrections, documents,
-horaires, fermetures et suppressions restent dans les formulaires habituels Strapi.
-L’assistant ne consulte pas les publications existantes et ne vérifie pas les faits.
+Pour modifier une publication ou un événement existant, ouvrir sa fiche puis
+cliquer sur **Modifier avec l’assistant IA** (également disponible dans le menu
+d’actions de chaque ligne). Enregistrer d’abord les éventuels changements manuels.
+L’assistant part du brouillon enregistré : décrire les changements, relire les
+versions **Avant modification** et **Proposition de modification**, puis choisir
+le brouillon ou la publication. Il met à jour la même fiche et conserve l’adresse,
+la date de publication, les photos, les documents et l’identifiant du calendrier.
+Les photos et documents restent modifiables dans le formulaire habituel.
+La lecture et la modification de la fiche doivent être autorisées par le rôle,
+en plus du droit d’utiliser l’assistant ; le droit de créer n’est pas nécessaire.
+Si quelqu’un change la fiche après la préparation, l’enregistrement est refusé :
+rouvrir l’assistant depuis la fiche pour repartir de la version à jour.
+Le texte et les dates de la fiche existante sont envoyés à Mistral avec la demande.
+Les horaires, fermetures et suppressions restent dans les formulaires habituels.
+L’assistant ne vérifie pas les faits.
 Il faut relire la proposition. Une structure JSON correcte ne garantit pas que
 les dates et les informations correspondent à l’intention de l’auteur.
 
 ## Modèle et coût
 
-Choix initial : **Ministral 3 8B**, identifiant fixé `ministral-8b-2512`, appelé
+Modèle par défaut : **Mistral Large 4**, identifiant `mistral-large-4`, appelé
 via l’API Mistral depuis Strapi. Pas de modèle à installer sur le serveur OVH et
-pas de service Docker supplémentaire. Le choix vise un coût faible et une tâche
-limitée d’extraction/rédaction. Sa qualité et sa latence réelles restent à évaluer
-avec les demandes du club et une clé valide.
+pas de service Docker supplémentaire. Ce modèle prend en charge les sorties
+JSON Schema utilisées par l’assistant. Sa qualité reste à vérifier sur les demandes du club.
 
-Au 7 novembre 2026, Mistral affiche **0,15 USD par million de jetons en entrée et
-0,15 USD par million en sortie** pour ce modèle. Exemple purement indicatif :
-1 500 jetons en entrée et 500 en sortie coûtent environ **0,0003 USD par demande**,
-soit **0,30 USD pour 1 000 demandes**, hors taxes et évolution des tarifs.
-La taille réelle inclut les instructions système et le schéma.
-Sources : [fiche officielle du modèle](https://docs.mistral.ai/models/ministral-3-8b-25-12),
-[tarifs Mistral](https://docs.mistral.ai/inference/pricing),
-[sorties structurées](https://docs.mistral.ai/inference/conversations/structured-output/custom).
+Au 11 novembre 2026, la fiche officielle affiche **0,70 USD par million de jetons
+en entrée et 2,10 USD par million en sortie**. Pour 1 500 jetons en entrée et
+500 en sortie, compter environ **0,0021 USD par demande**, soit **2,10 USD pour
+1 000 demandes**, hors taxes et évolution des tarifs. La taille réelle inclut
+les instructions système et le schéma.
+Source : [fiche officielle du modèle](https://docs.mistral.ai/models/mistral-large-4-0).
 
 `MISTRAL_MODEL` permet de changer le modèle sans reconstruire les images ; utiliser
 un modèle compatible avec les sorties JSON Schema. Aucun basculement automatique
-vers un modèle plus cher. L’API est limitée à 1 800 jetons en sortie, 20 secondes
+vers un modèle plus cher. L’API est limitée à 8 192 jetons en sortie (raisonnement inclus), 45 secondes
 de délai réseau et 30 préparations par heure par administrateur, deux au maximum
-simultanément pour cette instance CMS. Les demandes ne sont pas relancées
+simultanément pour cette instance CMS. Pour Large 4, l’effort de raisonnement est
+fixé à `low` pour réserver davantage de budget au JSON final. Les demandes ne sont pas relancées
 automatiquement. Le formulaire classique reste utilisable sans clé ou sans Mistral.
 
 ## Local : fichier `.env` privé
@@ -70,7 +80,7 @@ Dans le `.env` à la racine, renseigner avec votre éditeur :
 
 ```dotenv
 MISTRAL_API_KEY=remplacer_par_votre_cle
-MISTRAL_MODEL=ministral-8b-2512
+MISTRAL_MODEL=mistral-large-4
 ```
 
 Puis appliquer la configuration :

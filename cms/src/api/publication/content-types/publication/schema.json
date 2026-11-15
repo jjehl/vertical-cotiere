@@ -41,7 +41,15 @@
       "component": "publications.meeting"
     },
     "category": {
-      "type": "string",
+      "type": "enumeration",
+      "enum": [
+        "Cours",
+        "Compétition",
+        "Sortie",
+        "Stage",
+        "Vie du club"
+      ],
+      "required": true,
       "default": "Vie du club"
     },
     "coverImage": {
@@ -53,6 +61,10 @@
     },
     "date": {
       "type": "datetime"
+    },
+    "eventDate": {
+      "type": "datetime",
+      "private": true
     },
     "legacyKey": {
       "type": "string",
@@ -106,6 +118,17 @@
     },
     "legacySummary": {
       "type": "text",
+      "private": true,
+      "pluginOptions": {
+        "content-manager": {
+          "visible": false
+        }
+      }
+    },
+    "memberAuthor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
       "private": true,
       "pluginOptions": {
         "content-manager": {

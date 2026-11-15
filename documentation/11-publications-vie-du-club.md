@@ -11,18 +11,31 @@ fiche. Il n’y a plus d’album à créer séparément pour raconter une sortie
 3. Ajouter éventuellement des **Photos** et des **Documents joints** dans la médiathèque.
 4. Enregistrer puis **Publier**.
 
-La publication apparaît dans [La vie du club](http://localhost:3000/vie-du-club).
-Les dernières publications apparaissent aussi sur l’accueil automatiquement.
+Les publications avec au moins deux photos dans **Photos** apparaissent dans
+[La vie du club](http://localhost:3000/vie-du-club), qui présente les albums photo.
+Une image de couverture ou une seule photo ne constitue pas un album. Les trois
+dernières publications avec au moins deux photos apparaissent aussi automatiquement
+dans **La vie au sommet** sur l’accueil.
 La première photo sert de couverture. Son ordre est modifiable dans le sélecteur.
 Une publication sans photo affiche simplement son texte ; aucun visuel n’est requis.
 Plusieurs photos constituent une galerie avec visionneuse et téléchargement de l’original.
 
 La date de publication et l’adresse de la page sont générées automatiquement.
 L’adresse reste stable lorsqu’on change le titre. Il n’y a pas de résumé à
-rédiger séparément : l’aperçu est extrait du texte. **Thème** et **Autre photo de
-couverture** sont facultatifs.
+rédiger séparément : l’aperçu est extrait du texte. **Catégorie** est obligatoire :
+choisir **Cours**, **Compétition**, **Sortie**, **Stage** ou **Vie du club**.
+La valeur par défaut est **Vie du club**. **Autre photo de couverture** reste facultative.
 
 ## Ajouter un rendez-vous à l’agenda
+
+La liste **Publication** affiche séparément **Date de publication** et
+**Date de l’événement**. Cliquer sur l’en-tête de cette dernière colonne pour
+trier les rendez-vous par date croissante ou décroissante. Elle reprend
+automatiquement le début du rendez-vous et reste vide pour les fiches sans
+rendez-vous. Pour la modifier, changer le début dans le bloc agenda de la fiche.
+Si le navigateur conserve une ancienne sélection de colonnes, la mise à jour
+ajoute cette colonne au prochain chargement complet de l’admin. On peut aussi la
+cocher dans la roue dentée **Paramètres de la vue → Champs affichés**.
 
 Dans la même fiche, ajouter le bloc facultatif **Rendez-vous dans l’agenda**.
 Ce bloc est l’option d’ajout à l’agenda : aucune seconde fiche n’est créée.
@@ -32,14 +45,15 @@ Ce bloc est l’option d’ajout à l’agenda : aucune seconde fiche n’est cr
 - Si besoin, ajouter un **Lien pour participer** : HelloAsso, Framadate ou autre service, avec une clôture facultative.
 - L’**État du rendez-vous** peut être prévu, complet, annulé ou reporté.
 
-Après publication, la même fiche est visible dans le fil et l’agenda. Les prochains
+Après publication, la même fiche est visible dans l’agenda et, si elle contient
+au moins deux photos, dans La vie du club. Les prochains
 rendez-vous de l’accueil, les exports ICS et les abonnements lisent cette donnée.
 Les horaires s’affichent dans le fuseau **Europe/Paris**. Sans heure de fin, aucune
 durée n’est inventée. Les fins antérieures au début et les liens de participation
 sans protocole HTTP(S) sont refusés.
 
 Pour retirer seulement un rendez-vous de l’agenda, supprimer ce bloc et republier.
-Le texte et les photos restent dans le fil. Pour annuler une sortie, choisir
+La fiche et ses photos restent dans La vie du club. Pour annuler une sortie, choisir
 **annulé** et republier : le rendez-vous reste consultable avec son état et le
 bouton de participation est désactivé.
 
@@ -61,7 +75,8 @@ brouillon, téléverser un nouveau fichier dans le brouillon de la publication.
 
 Le menu principal contient **Le club**, **L’agenda**, **La vie du club**, avec le
 bouton **Rejoindre le club**. Les trois activités restent mises en avant sur
-l’accueil. Le fil propose une recherche et affiche 24 publications à la fois,
+l’accueil. La vie du club propose une recherche parmi les publications avec au moins deux photos et en
+affiche 24 à la fois,
 puis un bouton pour les précédentes. Il n’y a pas d’onglet séparé pour les photos.
 
 Les horaires/UFRAPS, documents officiels, activités et pages du club gardent leurs

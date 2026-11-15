@@ -1,5 +1,14 @@
 import report from "../../../content/import-report.json";
 import galleryRedirects from "../../../content/gallery-redirects.json";
+import competitionContent from "../../../content/competition-pages.json";
+
+const competitionAliases = new Set(competitionContent.aliases.map(slug => `/ressources/${slug}`));
+const competitionPage = '/ressources/coupe-de-lain';
+const consolidatedPages: Record<string,string> = {
+  '/activites/cours-escalade': '/horaires-et-acces',
+  '/ressources/stages': '/agenda?categorie=Stage',
+};
+const destination = (target: string) => consolidatedPages[target] || (competitionAliases.has(target) ? competitionPage : target);
 
 const redirects = {
   ...report.redirects,
@@ -15,6 +24,8 @@ export default defineEventHandler(async (event) => {
     return;
   }
   if (path === "/api/agenda.ics") return;
+  if (consolidatedPages[path]) return sendRedirect(event, consolidatedPages[path], 301);
+  if (competitionAliases.has(path)) return sendRedirect(event, competitionPage, 301);
   if(path.startsWith('/imports/')) {
     const config=useRuntimeConfig();
     try {
@@ -43,7 +54,7 @@ export default defineEventHandler(async (event) => {
   }
   if (url.searchParams.get("ical") === "1")
     return sendRedirect(event, "/api/agenda.ics", 301);
-  const target = redirects[path];
+  const target = redirects[path] ? destination(redirects[path]) : undefined;
   if (target && target !== path && target !== url.pathname)
     return sendRedirect(event, target, 301);
   if (/^\/(?:index\.php\/)?(?:events|evenements)(?:\/|$)/.test(path)) {
@@ -69,5 +80,5 @@ export default defineEventHandler(async (event) => {
   const oldId = url.searchParams.get("p") || url.searchParams.get("page_id");
   const idTarget =
     oldId && (report.idRedirects as Record<string, string>)[oldId];
-  if (idTarget) return sendRedirect(event, idTarget, 301);
+  if (idTarget) return sendRedirect(event, destination(idTarget), 301);
 });

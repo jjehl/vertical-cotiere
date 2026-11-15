@@ -1,12 +1,14 @@
 <script setup lang="ts">
-const { data, error, pending, refresh } = await useClubContent();
-const now = new Date();
-const upcoming = computed(() =>
-  data.value.events.filter((e) => new Date(e.end) >= now).slice(0, 3),
-);
-const news = computed(() =>
-  [...data.value.publications].sort((a, b) => (b.date||'').localeCompare(a.date||'')).slice(0, 3),
-);
+import type { SiteContent } from "#shared/types";
+import { homeContent } from "~/utils/home-content";
+
+const { data, error, pending, refresh } = await useFetch("/api/content", {
+  key: "home-content",
+  transform: (content: SiteContent) => homeContent(content),
+  default: () => ({ activities: [], events: [], publications: [] }),
+});
+const upcoming = computed(() => data.value.events);
+const news = computed(() => data.value.publications);
 useSeoMeta({
   title: "Vertical Côtière — L’escalade, ensemble",
   ogTitle: "Vertical Côtière — L’escalade, ensemble",

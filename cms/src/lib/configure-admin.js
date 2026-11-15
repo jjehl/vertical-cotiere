@@ -1,7 +1,11 @@
 // One-time editorial form defaults. Subsequent changes in "Configure the view" stay intact.
 module.exports=async function configureAdmin(strapi) {
   const store=strapi.store({type:'core',name:'vertical-admin',key:'forms-v6'});
-  if(await store.get()) return;
+  if(await store.get()) {
+    await require('./configure-publication-list')(strapi);
+    await require('./configure-publication-category')(strapi);
+    return;
+  }
   const forms={
     'api::club-timetable.club-timetable':{main:'season',fields:{season:['Saison','Ex. 2026–2027'],note:['Informations complémentaires'],sessions:['Créneaux de cours','Ajouter un bloc par cours, dans l’ordre d’affichage souhaité.'],ufraps:['Ouvertures et fermetures UFRAPS'],attachments:['Plannings et documents joints','Sélectionner ou téléverser des fichiers dans la médiathèque.']}},
     'api::club-document.club-document':{main:'title',fields:{title:['Titre du document'],slug:['Adresse du document','Conserver cette adresse lors du remplacement du fichier pour préserver les liens.'],category:['Rubrique'],description:['Présentation'],file:['Fichier','Sélectionner ou téléverser le document depuis la médiathèque.']}},
@@ -11,7 +15,7 @@ module.exports=async function configureAdmin(strapi) {
     'schedules.closure':{main:'label',fields:{label:['Nom de la période','Ex. Vacances de Noël.'],from:['Premier jour fermé'],until:['Dernier jour fermé','La reprise est possible à partir du lendemain.']}},
     'schedules.closed-day':{main:'label',fields:{label:['Motif','Ex. Jour férié ou pont de l’Ascension.'],date:['Jour fermé']}},
   };
-  forms['api::publication.publication']={main:'title',fields:{title:['Titre'],body:['Texte','Une information, un compte rendu ou une annonce : tout se publie ici.'],photos:['Photos (facultatif)','Ajouter et ordonner les photos. La première sert de couverture par défaut.'],attachments:['Documents joints (facultatif)'],meeting:['Rendez-vous dans l’agenda (facultatif)','Ajouter ce bloc pour afficher cette publication dans l’agenda. Le retirer pour la laisser uniquement dans le fil.'],category:['Thème (facultatif)'],coverImage:['Autre photo de couverture (facultatif)','Laisser vide pour utiliser la première photo.']}};
+  forms['api::publication.publication']={main:'title',fields:{title:['Titre'],body:['Texte','Une information, un compte rendu ou une annonce : tout se publie ici.'],photos:['Photos (facultatif)','Ajouter et ordonner les photos. La première sert de couverture par défaut.'],attachments:['Documents joints (facultatif)'],meeting:['Rendez-vous dans l’agenda (facultatif)','Ajouter ce bloc pour afficher cette publication dans l’agenda. Le retirer pour la laisser uniquement dans le fil.'],category:['Catégorie','Cours, Compétition, Sortie, Stage ou Vie du club.'],coverImage:['Autre photo de couverture (facultatif)','Laisser vide pour utiliser la première photo.']}};
   forms['publications.meeting']={fields:{start:['Début du rendez-vous'],end:['Fin (facultatif)','Pour une journée entière, indiquer le dernier jour inclus.'],allDay:['Toute la journée'],location:['Lieu'],participationUrl:['Lien pour participer (facultatif)'],participationLabel:['Texte du lien','Ex. S’inscrire ou Répondre au sondage.'],deadline:['Clôture des participations (facultatif)'],eventState:['État du rendez-vous']}};
   for(const uid of ['api::activity.activity','api::article.article','api::event.event']) {
     forms[uid]={fields:{coverImage:['Photo de couverture','Sélectionner ou téléverser une image dans la médiathèque.'],attachments:['Photos et documents joints','Affichés après le texte, sauf les médias déjà intégrés dans le contenu.']}};
@@ -42,4 +46,6 @@ module.exports=async function configureAdmin(strapi) {
     await service.updateConfiguration(model,config);
   }
   await store.set({value:true});
+  await require('./configure-publication-list')(strapi);
+  await require('./configure-publication-category')(strapi);
 };

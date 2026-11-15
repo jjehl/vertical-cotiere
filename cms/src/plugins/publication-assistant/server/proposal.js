@@ -1,6 +1,6 @@
 // Pure validation: never trust a schema-conforming model response as application data.
 const states = ['prévu', 'complet', 'annulé', 'reporté'];
-const categories = ['Cours', 'Compétition', 'Sortie', 'Stage', 'Vie du club'];
+const {categories}=require('../../../lib/publication-categories');
 const nullableString = { type: ['string', 'null'] };
 const meetingProperties = {
   start: { type: 'string' }, end: nullableString, location: nullableString,

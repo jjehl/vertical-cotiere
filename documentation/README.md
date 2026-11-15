@@ -24,6 +24,7 @@ pas une sauvegarde du site ni un export exhaustif de ses archives.
 | [12 — Assistant d’administration](12-assistant-administration.md) | Création en langage naturel, Mistral, coût et clés API locales/OVH |
 | [13 — Livraison re7 et prod](13-deploiement-re7-prod.md) | CI main/release, comptes restreints, Ansible et configuration OVH |
 | [14 — Stockage S3](14-stockage-s3.md) | SeaweedFS local, S3 OVH, configuration et migration des médias |
+| [15 — Espace membre](15-espace-membre.md) | Inscription, profil, licence FFME et publications personnelles avec l’assistant IA |
 
 ## Convention
 

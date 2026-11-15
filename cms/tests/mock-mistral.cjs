@@ -15,5 +15,16 @@ globalThis.fetch=async(input,options)=>{
   let proposal={status:'ready',question:null,title:instruction.includes('TEST_UI')?'Sortie proposée depuis l’assistant':'Sortie de recette IA',body:'Une sortie à Vertrieu. Prévoir un pique-nique.',category:'Sortie',meeting:{start:'2027-05-16T09:00',end:'2027-05-16T17:00',location:'Vertrieu',participationUrl:null,participationLabel:null,deadline:null,allDay:false,eventState:'prévu'}};
   if(instruction.includes('TEST_CLARIFY'))proposal={status:'needs_clarification',question:'Quelle est la date de la sortie ?',title:'',body:'',category:'Vie du club',meeting:null};
   if(instruction.includes('TEST_INVALID_DATE'))proposal.meeting.start='2027-03-28T02:30';
+  if(instruction.includes('TEST_EDIT')) {
+    const context=request.messages.find(message=>message.content.startsWith('Publication actuelle'));
+    assert(context,'Une modification doit fournir la publication actuelle au modèle.');
+    proposal={...JSON.parse(context.content.slice(context.content.indexOf('{'))),status:'ready',question:null};
+    proposal.body+=' Casque obligatoire.';
+    if(proposal.meeting) {
+      proposal.meeting.start='2027-05-23T09:00';
+      proposal.meeting.end='2027-05-23T17:00';
+      proposal.meeting.deadline=null;
+    }
+  }
   return Response.json({choices:[{finish_reason:'stop',message:{content:JSON.stringify(proposal)}}]});
 };

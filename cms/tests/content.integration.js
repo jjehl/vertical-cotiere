@@ -53,9 +53,12 @@ const populate={sessions:true,ufraps:{populate:{closures:true,closedDays:true}},
     assert.equal((await detail()).body.photos[0].title,'Nouvelle légende');
     const secondImage=await upload('integration-2.png',await require('sharp')({create:{width:40,height:30,channels:3,background:'#223b31'}}).png().toBuffer(),'image/png');
     await publications.update({documentId:publication.documentId,data:{body:'Un compte rendu enrichi.',photos:[secondImage.id,image.id],meeting:{start:'2027-03-28T00:00:00.000Z',allDay:true,location:'Beynost'}}});
+    assert.equal((await publications.findOne({documentId:publication.documentId})).eventDate,'2027-03-28T00:00:00.000Z');
+    assert.equal((await publications.findOne({documentId:publication.documentId,status:'published'})).eventDate,null);
     assert.equal((await detail()).body.meeting,null);
     assert.equal((await detail()).body.body,'Le compte rendu de notre sortie.');
     await publications.publish({documentId:publication.documentId});
+    assert.equal((await publications.findOne({documentId:publication.documentId,status:'published'})).eventDate,'2027-03-28T00:00:00.000Z');
     response=await detail();
     assert.equal(response.body.body,'Un compte rendu enrichi.');
     assert.equal(response.body.image,'/media/'+secondImage.id);
@@ -71,6 +74,7 @@ const populate={sessions:true,ufraps:{populate:{closures:true,closedDays:true}},
     assert.match(await(await website('/vie-du-club/'+slug)).text(),/Un compte rendu enrichi/);
     await assert.rejects(publications.update({documentId:publication.documentId,data:{meeting:{id:(await publications.findOne({documentId:publication.documentId,populate:{meeting:true}})).meeting.id,end:'2027-03-27T00:00:00.000Z'}}}),/terminer après/);
     await publications.update({documentId:publication.documentId,data:{meeting:null},status:'published'});
+    assert.equal((await publications.findOne({documentId:publication.documentId,status:'published'})).eventDate,null);
     assert(!(await api('site-content')).body.events.some(e=>e.slug===slug));
     assert.equal((await detail()).body.photos.length,2);
     await publications.unpublish({documentId:publication.documentId});
@@ -161,6 +165,9 @@ const populate={sessions:true,ufraps:{populate:{closures:true,closedDays:true}},
     const publicationConfig=await app.plugin('content-manager').service('content-types').findConfiguration(app.contentTypes['api::publication.publication']);
     assert.equal(publicationConfig.metadatas.slug.edit.visible,false);
     assert.equal(publicationConfig.metadatas.photos.edit.label,'Photos (facultatif)');
+    assert(publicationConfig.layouts.list.includes('eventDate'));
+    assert.equal(publicationConfig.metadatas.eventDate.list.sortable,true);
+    assert.equal(publicationConfig.metadatas.eventDate.edit.visible,false);
     for(const type of ['article','event','album'])assert.equal(app.contentTypes[`api::${type}.${type}`].pluginOptions['content-manager'].visible,false);
     const pageConfig=await app.plugin('content-manager').service('content-types').findConfiguration(app.contentTypes['api::page.page']);
     assert.equal(pageConfig.metadatas.structuredData.edit.visible,false);

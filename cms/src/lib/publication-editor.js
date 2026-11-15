@@ -17,6 +17,10 @@ module.exports=async function publicationEditor(context,next,strapi) {
     if(publishing&&!start)throw new errors.ValidationError('Indiquer le début du rendez-vous ou retirer le bloc agenda.');
   }
   const generated={};
+  // A scalar copy makes the component's start date sortable in Content Manager.
+  // Always derive it from the meeting, including when the meeting is removed.
+  const eventDate=merged.meeting?.start||null;
+  if(context.action!=='publish'||previous?.eventDate!==eventDate)generated.eventDate=eventDate;
   if(!merged.slug){
     let slug=slugify(merged.title);
     if(await strapi.documents(uid).findFirst({filters:{slug}}))slug+='-'+crypto.randomBytes(4).toString('hex');

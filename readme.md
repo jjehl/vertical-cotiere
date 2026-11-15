@@ -37,7 +37,7 @@ Dans Strapi, **Assistant de publication** prépare une actualité ou un rendez-v
 à partir de texte libre et de photos, avec aperçu avant enregistrement/publication.
 Renseigner `MISTRAL_API_KEY` dans le `.env` local puis exécuter
 `docker compose up -d --force-recreate cms`. Le modèle par défaut est
-`ministral-8b-2512`. Sans clé, les formulaires habituels restent disponibles.
+`mistral-large-4`. Sans clé, les formulaires habituels restent disponibles.
 
 Sur OVH, les secrets sont gérés dans le Vault du dépôt `infra-ovh`, séparément
 pour la recette et la production. Les images ne contiennent pas de clé Mistral.
@@ -53,6 +53,8 @@ des données séparées. Les prérequis sont détaillés dans le
 La [documentation](documentation/README.md) décrit l’existant, les choix techniques,
 le [fonctionnement Docker et CI](documentation/06-docker-et-ci.md) et
 [l’avancement de cette première version](documentation/07-design-et-avancement.md).
+
+L’[espace membre](documentation/15-espace-membre.md) permet de s’inscrire, gérer son profil et sa licence FFME. Un administrateur peut attribuer le rôle Contributeur pour créer, modifier et publier ses propres articles avec l’assistant IA depuis le site.
 
 Les [horaires et l’agenda sont repris localement](documentation/08-reprise-des-contenus.md), avec 141 fichiers disponibles, 39 documents téléchargeables et les exports ICS.
 

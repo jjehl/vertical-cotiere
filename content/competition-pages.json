@@ -1,0 +1,21 @@
+{
+  "aliases": [
+    "competition",
+    "autres-competitions",
+    "option-competition"
+  ],
+  "pages": [
+    {
+      "slug": "coupe-de-lain",
+      "title": "La compétition au club",
+      "group": "Compétitions",
+      "bodyHtml": "<p>À Vertical Côtière, la compétition est une autre façon de vivre l’escalade : se dépasser, découvrir de nouveaux mouvements et porter les couleurs du club. On y apprend à gérer son effort, à prendre confiance et à encourager les autres, avec le plaisir de grimper ensemble.</p>\n<h2>La Coupe de l’Ain, au cœur de notre engagement</h2>\n<p>Le club participe à la Coupe de l’Ain, un circuit départemental qui permet de rencontrer les grimpeurs des autres clubs et de se confronter à de nouveaux parcours. C’est l’occasion de découvrir la compétition et de progresser, dans un esprit sportif et convivial.</p>\n<p>Le calendrier, les informations pratiques et les résultats sont actualisés par le comité territorial : <a href=\"https://ffme01.fr/competitions/\" target=\"_blank\" rel=\"noopener noreferrer\">consulter les compétitions et la Coupe de l’Ain sur FFME 01</a>.</p>\n<h2>Du départemental au régional, et jusqu’au national</h2>\n<p>Selon leur niveau, leur motivation et les conditions de participation, nos grimpeurs peuvent également s’engager dans les coupes et championnats régionaux. Pour les plus expérimentés, le parcours peut se poursuivre vers les coupes et championnats nationaux. Les encadrants accompagnent chacun dans le choix d’objectifs adaptés à sa progression.</p>\n<ul>\n<li><a href=\"https://www.ffmeaura.fr/competition/coupes-regionales-escalade/\" target=\"_blank\" rel=\"noopener noreferrer\">Coupes régionales d’escalade — FFME Auvergne-Rhône-Alpes</a></li>\n<li><a href=\"https://mycompet.ffme.fr/app\" target=\"_blank\" rel=\"noopener noreferrer\">Calendrier officiel national des compétitions — FFME MyCompet</a></li>\n<li><a href=\"https://www.ffme.fr/escalade/competition/textes-et-reglements-competitions-escalade/\" target=\"_blank\" rel=\"noopener noreferrer\">Règles et conditions de participation — FFME</a></li>\n</ul>\n<h2>Une dynamique collective au club</h2>\n<p>La préparation s’appuie sur l’entraînement, la régularité et le partage d’expérience. Compétiteurs, encadrants, familles et bénévoles contribuent à cette aventure collective, où la progression compte autant que les résultats.</p>\n<p>Vous souhaitez découvrir la compétition ou aller plus loin ? Parlez-en à votre encadrant pour construire un parcours adapté et connaître les modalités de participation au club.</p>\n<p>Pour les jeunes motivés, <a href=\"/ressources/equipe-departementale\">l’équipe départementale de l’Ain</a> offre aussi un cadre pour progresser avec des grimpeurs d’autres clubs.</p>\n<p><a href=\"/agenda?categorie=Comp%C3%A9tition\">Les rendez-vous compétition du club</a></p>"
+    },
+    {
+      "slug": "equipe-departementale",
+      "title": "Équipe départementale",
+      "group": "Compétitions",
+      "bodyHtml": "<p>L’équipe départementale de l’Ain permet à de jeunes grimpeurs motivés de progresser ensemble, sur proposition de leur club. Encadrée par des professionnels, elle associe pratique sur mur et en falaise, stages et participation aux compétitions, selon le parcours de chacun.</p>\n<p>Pour envisager une candidature, parlez-en aux encadrants de Vertical Côtière. Les conditions d’accès, le programme et les modalités de participation sont actualisés par le comité territorial.</p>\n<p><a href=\"https://ffme01.fr/equipes-escalade/\" target=\"_blank\" rel=\"noopener noreferrer\">Découvrir l’équipe départementale sur le site FFME 01</a></p>"
+    }
+  ]
+}

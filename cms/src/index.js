@@ -14,9 +14,9 @@ module.exports = {
     });
   },
   async bootstrap({ strapi }) {
+    await require('./lib/migrate-publication-categories')(strapi);
     await require('./lib/configure-admin')(strapi);
-    const settings = strapi.store({ type: 'plugin', name: 'users-permissions', key: 'advanced' });
-    await settings.set({ value: { ...(await settings.get()), allow_register: false } });
+    await require('./lib/configure-members')(strapi);
     if (process.env.SEED_CONTENT !== 'true') {
       await require('./lib/migrate-timetable')(strapi);
       await require('./lib/migrate-media')(strapi);
@@ -25,6 +25,9 @@ module.exports = {
       await require('./lib/migrate-competition-photo')(strapi);
       await require('./lib/migrate-local-storage')(strapi);
       await require('./lib/migrate-publications')(strapi);
+      await require('./lib/migrate-publication-event-date')(strapi);
+      await require('./lib/migrate-competition-pages')(strapi);
+      await require('./lib/migrate-retire-stages-page')(strapi);
       return;
     }
     const source = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../content/initial.json'), 'utf8'));
@@ -62,5 +65,8 @@ module.exports = {
     await require('./lib/migrate-competition-photo')(strapi);
     await require('./lib/migrate-local-storage')(strapi);
     await require('./lib/migrate-publications')(strapi);
+    await require('./lib/migrate-publication-event-date')(strapi);
+    await require('./lib/migrate-competition-pages')(strapi);
+    await require('./lib/migrate-retire-stages-page')(strapi);
   },
 };

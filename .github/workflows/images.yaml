@@ -65,8 +65,11 @@ jobs:
         run: docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e RUN_CONTENT_TESTS=true -e SEED_CONTENT=false -e IMPORT_MEDIA=false cms node tests/content.integration.js
       - name: Assistant IA sans clé réelle (permissions, photos et publication)
         run: |
-          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T cms node --test tests/assistant.test.js
+          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T cms node --test tests/assistant.test.js tests/assistant-generation.test.js tests/publication-event-date.test.js tests/publication-columns.test.js tests/publication-categories.test.js
           docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e SEED_CONTENT=false -e IMPORT_MEDIA=false cms node tests/assistant.integration.js
+          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e PORT=1347 cms node tests/assistant-edit.integration.js
+      - name: Comptes membres, profils et contributions personnelles
+        run: docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e RUN_MEMBER_TESTS=true cms node tests/members.integration.js
       - name: Installer le navigateur de recette
         run: npx playwright install --with-deps chromium
         working-directory: frontend

@@ -4,6 +4,8 @@ const { data, error, refresh } = await useClubContent();
 const timetable = computed(
   () => data.value.timetable,
 );
+const course = computed(() => data.value.activities.find(activity => activity.slug === 'cours-escalade'));
+const courseParagraphs = computed(() => (course.value?.body || '').split(/\n\s*\n|\\n\\n/).filter(Boolean));
 const days = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"];
 const openings = computed(() => {
   const plan = timetable.value?.ufraps;
@@ -25,14 +27,49 @@ const openings = computed(() => {
   }
   return result;
 });
-useSeoMeta({ title: "Horaires & accès — Vertical Côtière" });
+useSeoMeta({
+  title: "Cours, horaires & accès — Vertical Côtière",
+  description: () => course.value?.summary || "Les cours d’escalade, les créneaux et les lieux de pratique de Vertical Côtière.",
+});
 </script>
 <template>
   <div class="section listing-page">
-    <span class="eyebrow">Les bons repères</span>
-    <h1>On se retrouve<br />au pied du <em>mur.</em></h1>
-    <p class="page-intro">Deux lieux pour progresser et partager la grimpe.</p>
-    <div id="acces" class="location-grid">
+    <header class="course-heading" :class="{'course-heading--with-photo':course?.image}">
+      <div>
+        <span class="eyebrow">Apprendre, progresser, se retrouver</span>
+        <h1>Cours, horaires<br />et <em>accès.</em></h1>
+      </div>
+      <img v-if="course?.image" class="course-heading__photo" :src="course.image" :alt="course.imageAlt || 'Une grimpeuse en salle pendant un cours d’escalade'" :style="{objectPosition:course.imagePosition}" width="600" height="450" />
+    </header>
+    <p class="page-intro">{{ course?.summary || 'Tous les repères pour choisir son cours et venir grimper au club.' }}</p>
+    <ContentState :error="error" @retry="refresh()" />
+    <section id="cours" class="course-overview" aria-labelledby="course-overview-title">
+      <div class="prose">
+        <h2 id="course-overview-title">Des premières prises à l’autonomie.</h2>
+        <p v-for="(paragraph,index) in courseParagraphs" :key="index">{{ paragraph }}</p>
+      </div>
+      <aside class="course-links" aria-label="Préparer son cours">
+        <NuxtLink to="#horaires">Choisir mon créneau <ArrowIcon /></NuxtLink>
+        <NuxtLink to="#acces">Les lieux de pratique <ArrowIcon /></NuxtLink>
+        <NuxtLink to="/inscriptions">Comment s’inscrire <ArrowIcon /></NuxtLink>
+        <NuxtLink to="/ressources/baby-escalade">Le baby escalade <ArrowIcon /></NuxtLink>
+        <NuxtLink to="/ressources/location-chaussons">Location de chaussons <ArrowIcon /></NuxtLink>
+        <NuxtLink :to="{path:'/agenda',query:{categorie:'Stage'}}">Les stages à venir <ArrowIcon /></NuxtLink>
+      </aside>
+    </section>
+    <section id="horaires" class="timetable-section">
+      <span class="eyebrow">Gymnase Louis Armstrong · Beynost</span>
+      <h2>Les cours {{ timetable?.season }}.</h2>
+      <p class="fine-print">
+        Planning publié par le club. Pour choisir votre inscription, vérifiez
+        également le créneau proposé sur HelloAsso.
+      </p>
+      <p v-if="timetable?.note">{{ timetable.note }}</p>
+      <TrainingWeek v-if="timetable" :sessions="timetable.sessions" :season="timetable.season" />
+    </section>
+    <section id="acces" class="timetable-section" aria-labelledby="locations-title">
+      <h2 id="locations-title">Deux lieux pour grimper.</h2>
+    <div class="location-grid">
       <article>
         <span class="eyebrow">Le mur du club</span>
         <h2>Gymnase<br />Louis Armstrong</h2>
@@ -63,53 +100,6 @@ useSeoMeta({ title: "Horaires & accès — Vertical Côtière" });
         >
       </article>
     </div>
-    <section id="horaires" class="timetable-section">
-      <span class="eyebrow">Gymnase Louis Armstrong · Beynost</span>
-      <h2>Les cours {{ timetable?.season }}.</h2>
-      <ContentState :error="error" @retry="refresh()" />
-      <p class="fine-print">
-        Planning publié par le club. Pour choisir votre inscription, vérifiez
-        également le créneau proposé sur HelloAsso.
-      </p>
-      <p v-if="timetable?.note">{{ timetable.note }}</p>
-      <TrainingWeek v-if="timetable" :sessions="timetable.sessions" :season="timetable.season" />
-      <details v-if="timetable">
-        <summary>Consulter tous les détails en tableau</summary>
-        <div class="timetable-scroll">
-        <table class="timetable">
-          <caption>
-            Horaires des cours
-            {{
-              timetable.season
-            }}
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Jour</th>
-              <th scope="col">Horaires</th>
-              <th scope="col">Cours / public</th>
-              <th scope="col">Années de naissance</th>
-              <th scope="col">Places indiquées</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="slot in timetable.sessions"
-              :key="`${slot.day}-${slot.start}`"
-            >
-              <th scope="row">{{ days[slot.day - 1] }}</th>
-              <td>{{ slot.start }} – {{ slot.end }}</td>
-              <td>
-                {{ slot.audience
-                }}<small v-if="!slot.supervised">Pratique non encadrée</small>
-              </td>
-              <td>{{ slot.birthYears || "—" }}</td>
-              <td>{{ slot.capacity || "—" }}</td>
-            </tr>
-          </tbody>
-        </table>
-        </div>
-      </details>
     </section>
     <section class="timetable-section" v-if="timetable">
       <span class="eyebrow">Mur UFRAPS / SIUAPS · Villeurbanne</span>
@@ -167,9 +157,25 @@ useSeoMeta({ title: "Horaires & accès — Vertical Côtière" });
         <ul class="schedule-documents"><li v-for="file in timetable.attachments" :key="file.id"><a :href="file.url" target="_blank" rel="noopener noreferrer">{{ file.name }} ↗</a></li></ul><p v-if="!timetable.attachments.length">Aucun document joint pour cette saison.</p>
       </details>
     </section>
-    <section class="timetable-section">
-      <h2>Informations d’accès complètes</h2>
-      <SourcePage slug="acces" />
-    </section>
+    <div v-if="course?.attachments?.length" class="timetable-section"><ContentAttachments :files="course.attachments" /></div>
   </div>
 </template>
+
+<style scoped>
+.course-heading { display: grid; align-items: center; }
+.course-heading--with-photo { grid-template-columns: minmax(0, 1fr) minmax(180px, 280px); gap: 48px; }
+.course-heading h1 { font-size: clamp(42px, 6.5vw, 88px); line-height: 1.02; letter-spacing: -.06em; margin-top: 23px; }
+.course-heading__photo { width: 100%; height: 210px; object-fit: cover; border-radius: 12px; }
+.course-overview { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(230px, 1fr); gap: 48px; margin-top: 32px; align-items: start; }
+.course-overview h2 { font-size: clamp(22px, 2.3vw, 30px); line-height: 1.2; letter-spacing: -.03em; margin-bottom: 20px; }
+.course-links { display: grid; border-top: 1px solid var(--line); }
+.course-links a { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.course-links a:hover { color: var(--orange); }
+.course-links svg { flex-shrink: 0; }
+@media (max-width: 760px) {
+  .course-heading--with-photo { grid-template-columns: minmax(0, 1fr) 100px; gap: 16px; }
+  .course-heading h1 { font-size: clamp(34px, 7vw, 48px); margin-top: 16px; }
+  .course-heading__photo { height: 125px; }
+  .course-overview { grid-template-columns: 1fr; gap: 24px; }
+}
+</style>

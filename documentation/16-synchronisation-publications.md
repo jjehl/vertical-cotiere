@@ -1,15 +1,39 @@
-# Synchroniser les publications entre environnements par API
+# Synchroniser les contenus du site entre environnements par API
 
-La commande `sync-publications.sh` fusionne les publications et leurs fichiers
-entre deux CMS au choix : **local, re7, prod ou une URL libre**, dans les deux sens.
-Elle ne transfère ni utilisateurs, ni secrets, ni base de données,
-ni les autres collections du site. Aucun transfert ne se produit lors d’un déploiement.
+La commande `sync-site.sh` fusionne les contenus gérés par le CMS et leurs fichiers
+entre deux environnements au choix : **local, re7, prod ou une URL libre**, dans
+les deux sens. `sync-publications.sh` reste disponible et conserve son périmètre
+initial : les publications uniquement, sauf option `--type` explicite.
+
+| Type (`--type`) | Contenus transférés |
+| --- | --- |
+| `all` | Tous les types ci-dessous ; valeur par défaut de `sync-site.sh` |
+| `documents` | Documents du club, PDF, catégories et descriptions |
+| `activities` | Activités et présentation des cours, textes et images de couverture |
+| `pages` | Pages et ressources, HTML, pièces jointes et relations avec les documents du club |
+| `timetable` | Saison, planning des cours, capacités, places historiques occupées, quatre tarifs par cours, activation/date d’ouverture des inscriptions, calendrier UFRAPS, périodes et jours de fermeture |
+| `publications` | Publications, brouillons, rendez-vous d’agenda, photos et pièces jointes |
+
+La page d’inscription utilise les tarifs et disponibilités du planning : ils sont
+donc transférés par `timetable`. Les dossiers d’adhésion, paiements HelloAsso,
+comptes membres, participants aux sondages, secrets et paramètres techniques ne
+sont jamais exportés. Les réservations et paiements de la cible restent en place ;
+les disponibilités sont recalculées à partir de ces dossiers.
+
+Les gabarits et textes écrits directement dans les fichiers Vue (par exemple
+les modalités d’inscription, Contact, Informations ou Partenaires), les styles
+et les images statiques sont livrés par le **déploiement du code**. Les données
+éditoriales des pages et ressources stockées dans Strapi passent par cette commande.
+Les anciennes collections masquées d’articles, événements et albums ne sont pas
+dupliquées : leurs contenus ont été migrés vers les publications.
+Aucun transfert de contenu ne se produit automatiquement lors d’un déploiement.
 
 ## Première configuration
 
 1. Installer cette version du CMS sur les environnements utilisés, selon le
    parcours habituel (`main` → CI → re7, release → prod). Les deux CMS doivent
-   disposer des nouvelles routes et de modèles de publications compatibles.
+   disposer des nouvelles routes et de modèles de contenus compatibles. La
+   commande refuse un ancien export qui ignorerait les nouveaux types.
 2. Dans **Paramètres → Jetons API** de chaque CMS pouvant servir de **source**,
    créer un jeton **personnalisé** avec seulement les permissions
    **content-sync → export et download**.
@@ -44,6 +68,16 @@ ni les autres collections du site. Aucun transfert ne se produit lors d’un dé
 ## Utilisation
 
 ```bash
+# Ensemble du site local → recette : aperçu, puis transfert.
+./sync-site.sh --from local --to re7 --dry-run
+./sync-site.sh --from local --to re7
+
+# Uniquement les pages (leurs documents liés sont traités automatiquement).
+./sync-site.sh --from local --to re7 --type pages --dry-run
+
+# Uniquement le planning, les tarifs et les réglages d’inscription.
+./sync-site.sh --from local --to re7 --type timetable --dry-run
+
 # Local → recette, aperçu puis transfert.
 ./sync-publications.sh --from local --to re7 --dry-run
 ./sync-publications.sh --from local --to re7
@@ -60,6 +94,13 @@ ni les autres collections du site. Aucun transfert ne se produit lors d’un dé
 ./sync-publications.sh --from re7 --to prod --slug sortie-falaise --dry-run
 ./sync-publications.sh --from re7 --to prod --slug sortie-falaise
 ```
+
+Les mêmes jetons et le même fichier `.env.content-sync` servent aux deux commandes ;
+aucune permission supplémentaire n’est nécessaire. Le transfert global traite
+d’abord les documents du club, puis les activités, pages, planning et publications.
+Une page isolée emporte aussi ses documents liés, chacun traité une seule fois par
+exécution. Si l’un de ces documents est en conflit ou en erreur, la page n’est pas
+importée ; les contenus indépendants continuent à être traités.
 
 Les six sens entre `local`, `re7` et `prod` sont possibles. La commande affiche
 les profils et les adresses source/cible avant de commencer. Sans options, le
@@ -99,7 +140,8 @@ Les options explicites ont priorité sur les URL directionnelles par défaut.
 HTTPS est requis, sauf pour un CMS HTTP sur la boucle locale.
 
 Le rapport affiche `create`, `update`, `unchanged`, `conflict` ou une erreur par
-publication, puis les totaux. Le code de sortie est **0** si tout réussit, **2**
+contenu, avec son type et son slug (ou `club-timetable`), puis les totaux.
+Le code de sortie est **0** si tout réussit, **2**
 si des conflits ou erreurs subsistent et **1** pour une erreur de configuration
 ou d’export global. Une erreur sur une publication n’empêche pas les suivantes
 d’être traitées. Le transfert n’est pas une transaction globale sur tout le site.
@@ -115,7 +157,43 @@ est lu une seule fois par exécution, même s’il figure dans plusieurs publica
 La limite de cette commande est **50 Mo par original**. Si un proxy ajoute une
 limite plus basse, l’ajuster ou réduire le fichier avant transfert.
 
-## Règles de fusion
+## Pages, documents et planning déjà présents sur la cible
+
+Comme pour les publications, un slug identique provoque un conflit au premier
+passage. Après avoir vérifié les deux fiches, rapprocher **un type et un contenu** :
+
+```bash
+./sync-site.sh --from local --to re7 --type pages --slug presentation --adopt-slug --dry-run
+./sync-site.sh --from local --to re7 --type pages --slug presentation --adopt-slug
+
+# Le planning est un contenu unique ; son sélecteur est club-timetable.
+./sync-site.sh --from local --to re7 --type timetable --slug club-timetable --adopt-slug --dry-run
+./sync-site.sh --from local --to re7 --type timetable --slug club-timetable --adopt-slug
+```
+
+Ce premier rapprochement donne priorité aux champs de la source. Les documents,
+pièces jointes et cours supplémentaires propres à la cible sont conservés.
+`--adopt-slug` n’autorise pas implicitement le rapprochement des documents liés à
+une page : traiter d’abord chaque document en conflit avec `--type documents` et
+son propre slug. Il n’existe pas de rapprochement global par slug ; `--type all`
+et `--slug` ne peuvent pas être combinés.
+
+Après le premier transfert, les champs éditoriaux suivent une fusion à trois
+états : dernière source, dernière cible et valeurs actuelles. Le planning compare
+les cours par `registrationCode` permanent, puis champ par champ : une modification
+locale de tarif peut être transférée tout en conservant une capacité modifiée
+sur RE7. Deux modifications incompatibles du même tarif produisent un conflit.
+Les cours supplémentaires de la cible et les cours retirés de la source restent
+en place ; le calendrier UFRAPS est comparé comme un bloc.
+
+Les identifiants techniques de composants ne sont jamais recopiés. Un planning
+déjà présent doit être rapproché explicitement. Une capacité inférieure aux
+inscriptions actives de la cible (en tenant compte des places historiques occupées)
+est refusée. Un changement de saison est aussi refusé si des paiements de la
+saison cible sont en cours. Ces contrôles sont refaits sous le même verrou que
+les réservations lors de l’import.
+
+## Règles de fusion des publications
 
 - L’identité d’une publication est le couple **instance source + documentId
   source** ; les identifiants de la cible sont indépendants. Cette correspondance
@@ -207,14 +285,22 @@ importante reste utile pour pouvoir annuler un transfert déjà terminé.
 | `POST /api/content-sync/files` | `upload` | Multipart `files` et `metadata` JSON, empreinte SHA-256 contrôlée |
 | `POST /api/content-sync/import` | `import` | Recalcul de fusion et écriture transactionnelle |
 
-`plan` et `import` reçoivent `{publication, adoptSlug}`. Le jeton d’export donne
+L’export accepte aussi `type=documents|activities|pages|timetable` et renvoie
+`{version:2,type,contents,pagination}`. Le format publication v1 est conservé.
+Les contenus v2 contiennent leurs versions brouillon/publiée, les fichiers et
+les dépendances documentaires. Les relations utilisent les documentId source,
+remappés au moyen des correspondances de la cible ; aucun identifiant de composant
+n’est accepté. Les champs autorisés sont limités aux types éditoriaux ci-dessus.
+
+`plan` et `import` reçoivent `{publication, adoptSlug}` pour le format v1 ou
+`{content, adoptSlug}` pour le format v2. Le jeton d’export donne
 accès aux champs éditoriaux historiques privés et aux originaux de la médiathèque :
 le réserver à l’administrateur. Les permissions ne sont attribuées à aucun rôle
 membre. Les routes ne permettent ni d’importer des utilisateurs ni de fournir un
 chemin serveur, une URL de téléchargement arbitraire ou des credentials S3.
 
 ```bash
-node --test cms/tests/content-sync.test.js scripts/tests/sync-publications.test.mjs
+node --test cms/tests/content-sync.test.js cms/tests/content-sync-site.test.js scripts/tests/sync-publications.test.mjs
 docker compose cp scripts/sync-publications.mjs cms:/tmp/vertical-sync-client.mjs
 docker compose exec -T -e RUN_CONTENT_SYNC_TESTS=true cms node tests/content-sync.integration.js
 ```

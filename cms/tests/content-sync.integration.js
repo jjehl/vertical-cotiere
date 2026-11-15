@@ -149,6 +149,7 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
       assert.equal((await run(config,credentials)).create,1);
       assert.equal((await run(config,credentials)).unchanged,1);
     }finally{sourceServer.closeAllConnections();await new Promise(resolve=>sourceServer.close(resolve));}
+    await require('./content-sync-site.integration.cjs')({app,request,sourceToken,targetToken,photo,attachment,bytes,run,options});
     console.log('OK : API réservée aux jetons, export complet, originaux S3, aperçu sans écriture, fusion, brouillons, conflits, absence de doublons, concurrence et rollback PostgreSQL.');
   }finally{
     if(app){for(const file of await app.db.query('plugin::upload.file').findMany())await app.plugin('upload').service('upload').remove(file).catch(()=>{});await app.destroy();}

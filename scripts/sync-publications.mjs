@@ -9,6 +9,7 @@ import {pipeline} from 'node:stream/promises';
 import {pathToFileURL} from 'node:url';
 
 const environments={local:'http://localhost:1337',re7:'https://vertical-cotiere-admin.re7.jehl.org',prod:'https://vertical-cotiere-admin.jehl.org'};
+const contentTypes=['documents','activities','pages','timetable','publications'];
 const prefix=name=>'SYNC_'+name.toUpperCase().replace(/-/g,'_');
 function normalizeUrl(value){
   let url;try{url=new URL(value);}catch{throw Error('URL de CMS invalide : utiliser local, re7, prod ou une URL complète.');}
@@ -32,22 +33,25 @@ function endpoint(selector,env){
   return {url,profile:matches.length===1?matches[0]:null};
 }
 export function options(argv,env=process.env){
-  const result={source:env.SYNC_SOURCE_URL||'local',target:env.SYNC_TARGET_URL||'re7',dryRun:false,adoptSlug:false};
+  const result={source:env.SYNC_SOURCE_URL||'local',target:env.SYNC_TARGET_URL||'re7',dryRun:false,adoptSlug:false,type:'publications'};
   for(let i=0;i<argv.length;i++){
     const arg=argv[i];
     if(arg==='--dry-run')result.dryRun=true;
     else if(arg==='--adopt-slug')result.adoptSlug=true;
     else if(arg==='--help'||arg==='-h')result.help=true;
-    else if(['--from','--to','--slug'].includes(arg)){
+    else if(['--from','--to','--slug','--type'].includes(arg)){
       const value=argv[++i];if(!value||value.startsWith('--'))throw Error('Valeur requise après '+arg);
-      result[arg==='--from'?'source':arg==='--to'?'target':'slug']=value;
+      result[arg==='--from'?'source':arg==='--to'?'target':arg==='--type'?'type':'slug']=value;
     }else throw Error('Option inconnue : '+arg);
   }
   for(const key of ['source','target']){
     const resolved=endpoint(result[key],env);result[key]=resolved.url;result[key+'Profile']=resolved.profile;
   }
   if(result.source===result.target&&!result.help)throw Error('La source et la destination doivent être distinctes.');
-  if(result.adoptSlug&&!result.slug)throw Error('--adopt-slug nécessite --slug pour rapprocher une seule publication.');
+  if(![...contentTypes,'all'].includes(result.type))throw Error('Type inconnu : utiliser all, publications, pages, activities, documents ou timetable.');
+  if(result.type==='all'&&result.slug)throw Error('--slug nécessite de choisir un seul --type.');
+  if(result.adoptSlug&&!result.slug)throw Error('--adopt-slug nécessite --slug pour rapprocher un seul contenu.');
+  if(result.type==='timetable'&&result.slug&&result.slug!=='club-timetable')throw Error('Le slug du planning est club-timetable.');
   if(result.slug&&!(/^[a-zA-Z0-9_-]{1,200}$/).test(result.slug))throw Error('Slug invalide.');
   return result;
 }
@@ -84,52 +88,68 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
     }
   };
   const jsonRequest=async(side,path,body)=>(await request(side,path,body?{method:'POST',json:body}:{})).json();
-  const directory=await mkdtemp(join(tmpdir(),'vertical-sync-')),cache=new Map();
+  const directory=await mkdtemp(join(tmpdir(),'vertical-sync-')),cache=new Map(),processed=new Map();
   const summary={create:0,update:0,unchanged:0,conflict:0,failed:0};
   log(`${config.dryRun?'Aperçu':'Transfert'} : ${config.sourceProfile?config.sourceProfile+' (':''}${config.source}${config.sourceProfile?')':''} → ${config.targetProfile?config.targetProfile+' (':''}${config.target}${config.targetProfile?')':''}`);
   log('Lecture des fichiers originaux pour vérifier leurs empreintes. Aucune suppression automatique.');
-  try{
-    let page=1,pageCount=1,seen=0;
-    do{
-      const query=new URLSearchParams({page:String(page),pageSize:'10',...(config.slug?{slug:config.slug}:{})});
-      const batch=await jsonRequest('source','/api/content-sync/export?'+query);
-      if(batch.version!==1||!Array.isArray(batch.publications)||!batch.pagination)throw Error('Format d’export incompatible.');
-      pageCount=batch.pagination.pageCount;
-      for(const publication of batch.publications){
-        seen++;
-        try{
-          for(const file of publication.files){
-            const key=publication.sourceId+':'+file.id;
-            if(!cache.has(key)){
-              const response=await request('source','/api/content-sync/files/'+encodeURIComponent(file.id));
-              const filepath=join(directory,createHash('sha256').update(key).digest('hex'));
-              const hash=createHash('sha256');let size=0;
-              const measure=new Transform({transform(chunk,encoding,callback){size+=chunk.length;if(size>50*1024*1024)return callback(Error('Fichier supérieur à 50 Mo.'));hash.update(chunk);callback(null,chunk);}});
-              await pipeline(Readable.fromWeb(response.body),measure,createWriteStream(filepath,{mode:0o600}));
-              cache.set(key,{filepath,sha256:hash.digest('hex')});
-            }
-            file.sha256=cache.get(key).sha256;
-          }
-          const payload={publication,adoptSlug:config.adoptSlug};
-          let result=await jsonRequest('target','/api/content-sync/plan',payload);
-          if(!config.dryRun&&result.action!=='conflict'){
-            for(const file of result.missingFiles){
-              const cached=cache.get(publication.sourceId+':'+file.id);
-              const form=new FormData();
-              form.append('metadata',JSON.stringify(file));
-              form.append('files',new Blob([await readFile(cached.filepath)],{type:file.mime}),file.name);
-              await(await request('target','/api/content-sync/files',{method:'POST',form})).json();
-            }
-            result=await jsonRequest('target','/api/content-sync/import',payload);
-          }
-          if(!Object.hasOwn(summary,result.action))throw Error('Réponse d’import incompatible.');
-          summary[result.action]++;
-          log(`${result.action} : ${publication.draft.slug}${result.conflicts?.length?' — '+result.conflicts.join(', '):''}${result.adopted?' (rapprochement par slug)':''}`);
-        }catch(error){summary.failed++;log(`Erreur : ${publication.draft?.slug||publication.documentId} — ${error.message}`);}
+  async function transfer(content,{dependency=false}={}){
+    const type=content.version===2?content.type:'publications';
+    const identity=[type,content.sourceId,content.documentId].join(':');
+    if(processed.has(identity))return processed.get(identity);
+    const label=type+'/'+(content.draft?.slug||(type==='timetable'?'club-timetable':content.documentId));
+    let success=false;
+    try{
+      if(content.version===2&&(!contentTypes.includes(type)||!Array.isArray(content.dependencies)))throw Error('Format de contenu incompatible.');
+      for(const child of content.dependencies||[]){
+        if(child.type!=='documents'||child.sourceId!==content.sourceId||child.dependencies?.length)throw Error('Dépendance incompatible.');
+        if(!await transfer(child,{dependency:true}))throw Error('Document lié en conflit ou en erreur : '+child.draft?.slug);
       }
-      page++;
-    }while(page<=pageCount);
-    if(!seen)log('Aucune publication trouvée.');
+      for(const file of content.files){
+        const key=content.sourceId+':'+file.id;
+        if(!cache.has(key)){
+          const response=await request('source','/api/content-sync/files/'+encodeURIComponent(file.id));
+          const filepath=join(directory,createHash('sha256').update(key).digest('hex'));
+          const hash=createHash('sha256');let size=0;
+          const measure=new Transform({transform(chunk,encoding,callback){size+=chunk.length;if(size>50*1024*1024)return callback(Error('Fichier supérieur à 50 Mo.'));hash.update(chunk);callback(null,chunk);}});
+          await pipeline(Readable.fromWeb(response.body),measure,createWriteStream(filepath,{mode:0o600}));
+          cache.set(key,{filepath,sha256:hash.digest('hex')});
+        }
+        file.sha256=cache.get(key).sha256;
+      }
+      // Nested descriptors use the same cache even when the document was processed earlier.
+      for(const child of content.dependencies||[])for(const file of child.files){const cached=cache.get(child.sourceId+':'+file.id);if(cached)file.sha256=cached.sha256;}
+      const payload={...(content.version===2?{content}:{publication:content}),adoptSlug:!dependency&&config.adoptSlug};
+      let result=await jsonRequest('target','/api/content-sync/plan',payload);
+      if(!config.dryRun&&result.action!=='conflict'){
+        for(const file of result.missingFiles){
+          const cached=cache.get(content.sourceId+':'+file.id);
+          const form=new FormData();form.append('metadata',JSON.stringify(file));
+          form.append('files',new Blob([await readFile(cached.filepath)],{type:file.mime}),file.name);
+          await(await request('target','/api/content-sync/files',{method:'POST',form})).json();
+        }
+        result=await jsonRequest('target','/api/content-sync/import',payload);
+      }
+      if(!['create','update','unchanged','conflict'].includes(result.action))throw Error('Réponse d’import incompatible.');
+      summary[result.action]++;success=result.action!=='conflict';
+      log(`${result.action} : ${label}${result.conflicts?.length?' — '+result.conflicts.join(', '):''}${result.adopted?' (rapprochement explicite)':''}`);
+    }catch(error){summary.failed++;log(`Erreur : ${label} — ${error.message}`);}
+    processed.set(identity,success);return success;
+  }
+  try{
+    let seen=0;
+    for(const type of config.type==='all'?contentTypes:[config.type||'publications']){
+      let page=1,pageCount=1;
+      do{
+        const query=new URLSearchParams({page:String(page),pageSize:'10',...(type==='publications'?{}:{type}),...(config.slug?{slug:config.slug}:{})});
+        const batch=await jsonRequest('source','/api/content-sync/export?'+query);
+        const contents=type==='publications'?batch.publications:batch.contents;
+        if(batch.version!==(type==='publications'?1:2)||type!=='publications'&&batch.type!==type||!Array.isArray(contents)||!batch.pagination||!Number.isSafeInteger(batch.pagination.pageCount)||batch.pagination.pageCount<0)throw Error('Format d’export incompatible pour '+type+' ; mettre les deux CMS à jour.');
+        pageCount=batch.pagination.pageCount;
+        for(const content of contents){if(type!=='publications'&&content.type!==type)throw Error('Type de contenu incompatible.');seen++;await transfer(content);}
+        page++;
+      }while(page<=pageCount);
+    }
+    if(!seen)log('Aucun contenu trouvé.');
     log(`${config.dryRun?'Prévu':'Résultat'} : ${summary.create} créations, ${summary.update} mises à jour, ${summary.unchanged} inchangées, ${summary.conflict} conflits, ${summary.failed} erreurs.`);
     return summary;
   }finally{await rm(directory,{recursive:true,force:true});}
@@ -137,7 +157,7 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   try{
     const config=options(process.argv.slice(2));
-    if(config.help)console.log('Usage : ./sync-publications.sh --from SOURCE --to CIBLE [--dry-run] [--slug SLUG [--adopt-slug]]\nSource et cible : local, re7, prod, un profil SYNC_<NOM>_URL ou une URL complète.\nPar défaut : local → re7. Jetons : SYNC_<ENV>_EXPORT_TOKEN et SYNC_<ENV>_IMPORT_TOKEN.\nExemples : --from re7 --to prod --dry-run ; --from prod --to local --dry-run.\nURLs libres : SYNC_SOURCE_URL/TOKEN et SYNC_TARGET_URL/TOKEN.');
+    if(config.help)console.log('Usage : ./sync-site.sh --from SOURCE --to CIBLE [--dry-run] [--type TYPE] [--slug SLUG [--adopt-slug]]\nTypes : all, documents, activities, pages, timetable, publications. Planning : --type timetable --slug club-timetable.\nSource et cible : local, re7, prod, un profil SYNC_<NOM>_URL ou une URL complète.\n./sync-site.sh transfère tous les contenus ; ./sync-publications.sh reste limité aux publications par défaut.\nPar défaut : local → re7. Jetons : SYNC_<ENV>_EXPORT_TOKEN et SYNC_<ENV>_IMPORT_TOKEN.\nURLs libres : SYNC_SOURCE_URL/TOKEN et SYNC_TARGET_URL/TOKEN.');
     else {const result=await run(config);if(result.conflict||result.failed)process.exitCode=2;}
   }catch(error){console.error(error.message);process.exitCode=1;}
 }

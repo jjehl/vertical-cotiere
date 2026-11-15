@@ -25,7 +25,7 @@ pas une sauvegarde du site ni un export exhaustif de ses archives.
 | [13 — Livraison re7 et prod](13-deploiement-re7-prod.md) | CI main/release, comptes restreints, Ansible et configuration OVH |
 | [14 — Stockage S3](14-stockage-s3.md) | SeaweedFS local, S3 OVH, configuration et migration des médias |
 | [15 — Espace membre](15-espace-membre.md) | Inscription, profil, licence FFME et publications personnelles avec l’assistant IA |
-| [16 — Synchronisation des publications](16-synchronisation-publications.md) | Fusion par API entre local, re7, prod ou autres CMS, fichiers, jetons et conflits |
+| [16 — Synchronisation des contenus du site](16-synchronisation-publications.md) | Pages, publications, documents, planning et tarifs entre local, re7 et prod, fichiers, jetons et conflits |
 | [17 — Inscriptions et paiement](17-inscriptions.md) | Calendrier, tarifs, places, dossiers et HelloAsso Checkout |
 
 ## Convention

@@ -8,6 +8,64 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
 
+test('Sélection des contenus du site et rapprochement limité à un type et un slug',()=>{
+  assert.equal(options(['--type','all'],{}).type,'all');
+  assert.equal(options(['--type','timetable','--slug','club-timetable','--adopt-slug'],{}).type,'timetable');
+  assert.throws(()=>options(['--type','all','--slug','page','--adopt-slug'],{}),/un seul --type/);
+  assert.throws(()=>options(['--type','timetable','--slug','inconnu'],{}),/club-timetable/);
+  assert.throws(()=>options(['--type','users'],{}),/Type inconnu/);
+});
+
+test('Pages seules et site complet : dépendances avant les pages, empreintes, cache et ancien format publication',async()=>{
+  const bytes=Buffer.from('document de recette'),sha256=createHash('sha256').update(bytes).digest('hex');
+  const descriptor={id:'1',name:'document.pdf',mime:'application/pdf',alternativeText:'',caption:''};
+  const content=type=>({version:2,type,sourceId:'source',documentId:type,draft:{slug:type},published:null,files:[{...descriptor}],dependencies:[]});
+  const contents={documents:content('documents'),activities:content('activities'),timetable:content('timetable')};
+  contents.pages={...content('pages'),dependencies:[structuredClone(contents.documents)]};
+  contents.publications={version:1,sourceId:'source',documentId:'publications',draft:{slug:'publication'},published:null,files:[{...descriptor}]};
+  const imported=new Set(),order=[];let downloads=0,uploads=0;
+  const server=createServer(async(req,res)=>{
+    try{
+      const url=new URL(req.url,'http://local.invalid');const send=body=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));};
+      if(url.pathname==='/source/api/content-sync/export'){
+        const type=url.searchParams.get('type')||'publications';
+        return send(type==='publications'?{version:1,publications:[contents.publications],pagination:{pageCount:1}}:{version:2,type,contents:[contents[type]],pagination:{pageCount:1}});
+      }
+      if(url.pathname==='/source/api/content-sync/files/1'){downloads++;res.end(bytes);return;}
+      let raw='';for await(const part of req)raw+=part;
+      if(url.pathname==='/target/api/content-sync/files'){uploads++;return send({id:42});}
+      const payload=JSON.parse(raw),item=payload.content||payload.publication,type=item.type||'publications';
+      assert.equal(item.files[0].sha256,sha256);
+      if(type==='pages')assert.equal(item.dependencies[0].files[0].sha256,sha256);
+      const action=imported.has(type)?'unchanged':'create';
+      if(url.pathname.endsWith('/plan'))return send({action,missingFiles:uploads?[]:item.files});
+      assert(url.pathname.endsWith('/import'));if(type==='pages')assert(imported.has('documents'));
+      order.push(type);imported.add(type);send({action});
+    }catch(error){res.writeHead(500);res.end(error.message);}
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const address='http://127.0.0.1:'+server.address().port;
+  const config={source:address+'/source',target:address+'/target',type:'pages',dryRun:true,adoptSlug:false};
+  const credentials={sourceToken:'read',targetToken:'write',log:()=>{}};
+  try{
+    const preview=await run(config,credentials);assert.equal(preview.create,2);assert.equal(preview.failed,0);assert.equal(uploads,0);assert.equal(imported.size,0);assert.equal(downloads,1);
+    config.dryRun=false;
+    const first=await run(config,credentials);assert.equal(first.create,2);assert.deepEqual(order,['documents','pages']);assert.equal(uploads,1);
+    config.type='all';
+    const all=await run(config,credentials);assert.equal(all.create,3);assert.equal(all.unchanged,2);assert.equal(all.failed,0);assert.equal(uploads,1);
+    assert.equal(downloads,3); // One read per run, despite references across five types.
+    assert.equal((await run(config,credentials)).unchanged,5);
+  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});
+
+test('Un ancien CMS ne peut pas répondre silencieusement à un transfert de pages',async()=>{
+  let writes=0;
+  const server=createServer((req,res)=>{if(req.method!=='GET')writes++;res.setHeader('Content-Type','application/json');res.end(JSON.stringify({version:1,publications:[],pagination:{pageCount:0}}));});
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));const address='http://127.0.0.1:'+server.address().port;
+  try{await assert.rejects(()=>run({source:address+'/source',target:address+'/target',type:'all'},{sourceToken:'read',targetToken:'write',log:()=>{}}),/mettre les deux CMS à jour/);assert.equal(writes,0);}
+  finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});
+
 test('La commande refuse les URL à risque et le rapprochement global par slug',()=>{
   assert.throws(()=>options(['--to','http://example.com'],{}),/HTTPS/);
   assert.throws(()=>options(['--to','https://secret@example.com'],{}),/credentials/);

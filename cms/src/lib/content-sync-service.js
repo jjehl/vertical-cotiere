@@ -31,46 +31,52 @@ async function exportPage(app,{page=1,pageSize=10,slug}={}){
   const total=await docs.count({status:'draft',filters});
   const rows=await docs.findMany({status:'draft',filters,sort:'documentId:asc',start:(page-1)*pageSize,limit:pageSize,fields:['documentId']});
   const publications=[];
-  const mediaIndex=await require('./media-urls').getMediaIndex(app);
   for(const row of rows){
     const data=await versions(app,row.documentId);
-    const ids=new Set(),embedded={draft:new Set(),published:new Set()};
-    for(const [status,version] of Object.entries(data)){
-      if(!version)continue;
-      for(const key of ['photos','attachments'])version[key].forEach(id=>ids.add(id));
-      if(version.coverImage)ids.add(version.coverImage);
-      for(const key of ['body','legacyBody','legacyHtml']){
-        if(!version[key])continue;
-        const site=(process.env.PUBLIC_SITE_URL||'http://localhost:3000').replace(/\/$/,'');
-        for(const prefix of ['/media/','/document-files/','/imports/','/gallery/'])version[key]=version[key].split(site+prefix).join(prefix);
-        // Old document aliases are exported as file references, without importing club-document records.
-        for(const match of version[key].matchAll(/(?<![a-zA-Z0-9_:/.-])\/document-files\/([a-zA-Z0-9_-]+)/g)){
-          const document=await app.documents('api::club-document.club-document').findFirst({status:'published',filters:{slug:match[1]},populate:{file:true}});
-          if(!document?.file)fail(422,'Document intégré introuvable : '+match[1]);
-          version[key]=version[key].split(match[0]).join('/media/'+document.file.id);
-        }
-        version[key]=version[key].replace(/(?<![a-zA-Z0-9_:/.-])\/imports\/[a-zA-Z0-9_.-]+/g,url=>{
-          const asset=mediaIndex.assets?.[url];if(!asset?.mediaId)fail(422,'Fichier historique introuvable : '+url);
-          return '/media/'+asset.mediaId;
-        }).replace(/(?<![a-zA-Z0-9_:/.-])\/gallery\/(\d+)-(original|thumb)\.(?:jpe?g|png|gif|webp)/gi,(url,sourceId,variant)=>{
-          const id=mediaIndex.photos?.[sourceId];if(!id)fail(422,'Photo historique introuvable : '+url);return '/media/'+id+(variant==='thumb'?'?variant=thumbnail':'');
-        });
-        for(const match of version[key].matchAll(model.mediaPattern())){ids.add(match[1]);embedded[status].add(match[1]);}
-      }
-    }
-    const files=[];
-    for(const id of ids){
-      const file=await app.db.query('plugin::upload.file').findOne({where:{id:Number(id)}});
-      if(!file)fail(422,'Fichier source introuvable : '+id);
-      files.push({id:String(file.id),name:file.name,mime:file.mime,alternativeText:file.alternativeText||'',caption:file.caption||''});
-      // The public media proxy requires a relation to a published publication.
-      for(const [status,version] of Object.entries(data))if(version&&embedded[status].has(id)&&!version.photos.includes(id)&&!version.attachments.includes(id)&&version.coverImage!==id){
-        version[file.mime.startsWith('image/')?'photos':'attachments'].push(id);
-      }
-    }
+    const files=await prepareMedia(app,data);
     publications.push({version:1,sourceId,documentId:row.documentId,...data,files});
   }
   return {version:1,sourceId,publications,pagination:{page,pageSize,total,pageCount:Math.ceil(total/pageSize)}};
+}
+async function prepareMedia(app,data,{lists=['photos','attachments'],singles=['coverImage'],texts=['body','legacyBody','legacyHtml']}={}){
+  const mediaIndex=await require('./media-urls').getMediaIndex(app);
+  const ids=new Set(),embedded={draft:new Set(),published:new Set()};
+  for(const [status,version] of Object.entries(data)){
+    if(!version)continue;
+    for(const key of lists)version[key].forEach(id=>ids.add(id));
+    for(const key of singles)if(version[key])ids.add(version[key]);
+    for(const key of texts){
+      if(!version[key])continue;
+      const site=(process.env.PUBLIC_SITE_URL||'http://localhost:3000').replace(/\/$/,'');
+      for(const prefix of ['/media/','/document-files/','/imports/','/gallery/'])version[key]=version[key].split(site+prefix).join(prefix);
+      // Old document aliases are exported as file references, without importing club-document records.
+      for(const match of version[key].matchAll(/(?<![a-zA-Z0-9_:/.-])\/document-files\/([a-zA-Z0-9_-]+)/g)){
+        const document=await app.documents('api::club-document.club-document').findFirst({status:'published',filters:{slug:match[1]},populate:{file:true}});
+        if(!document?.file)fail(422,'Document intégré introuvable : '+match[1]);
+        version[key]=version[key].split(match[0]).join('/media/'+document.file.id);
+      }
+      version[key]=version[key].replace(/(?<![a-zA-Z0-9_:/.-])\/imports\/[a-zA-Z0-9_.-]+/g,url=>{
+        const asset=mediaIndex.assets?.[url];if(!asset?.mediaId)fail(422,'Fichier historique introuvable : '+url);
+        return '/media/'+asset.mediaId;
+      }).replace(/(?<![a-zA-Z0-9_:/.-])\/gallery\/(\d+)-(original|thumb)\.(?:jpe?g|png|gif|webp)/gi,(url,sourceId,variant)=>{
+        const id=mediaIndex.photos?.[sourceId];if(!id)fail(422,'Photo historique introuvable : '+url);return '/media/'+id+(variant==='thumb'?'?variant=thumbnail':'');
+      });
+      for(const match of version[key].matchAll(model.mediaPattern())){ids.add(match[1]);embedded[status].add(match[1]);}
+    }
+  }
+  const files=[];
+  for(const id of ids){
+    const file=await app.db.query('plugin::upload.file').findOne({where:{id:Number(id)}});
+    if(!file)fail(422,'Fichier source introuvable : '+id);
+    files.push({id:String(file.id),name:file.name,mime:file.mime,alternativeText:file.alternativeText||'',caption:file.caption||''});
+    // Inline files also need a public relation on their owning content.
+    for(const [status,version] of Object.entries(data))if(version&&embedded[status].has(id)&&!lists.some(key=>version[key].includes(id))&&!singles.some(key=>version[key]===id)){
+      const field=lists.includes('photos')&&file.mime.startsWith('image/')?'photos':lists.includes('attachments')?'attachments':null;
+      if(!field)fail(422,'Le fichier intégré ne peut pas être rattaché à ce type de contenu : '+id);
+      version[field].push(id);
+    }
+  }
+  return files;
 }
 async function download(app,id){
   const file=await app.db.query('plugin::upload.file').findOne({where:{id}});
@@ -173,4 +179,4 @@ async function upload(app,file,metadata){
     uploaded=files[0];await entry.set({value:{id:uploaded.id}});return {id:uploaded.id,reused:false};
   });}catch(error){if(uploaded)await app.plugin('upload').service('upload').remove(uploaded).catch(()=>{});throw error;}
 }
-module.exports={exportPage,download,plan,publicPlan,importPublication,upload};
+module.exports={exportPage,download,plan,publicPlan,importPublication,upload,instanceId,locked,store,mediaMapping,prepareMedia};

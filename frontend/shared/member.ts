@@ -1,7 +1,7 @@
 export interface MemberProfile {
   id:number; username:string; email:string; emailConfirmed:boolean; firstName:string; lastName:string; phone:string; street:string;
   postalCode:string; city:string; country:string; ffmeLicenseNumber:string;
-  role:'basic'|'contributor';
+  role:'basic'|'contributor'|'admin';
   hasPassword:boolean;googleConnected:boolean;
 }
 export interface MemberLoginAccount {

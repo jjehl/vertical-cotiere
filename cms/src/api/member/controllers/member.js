@@ -1,11 +1,12 @@
 const {errors}=require('@strapi/utils');
 const {profile,validateProfile}=require('../../../lib/member-profile');
 const uid='api::publication.publication';
+const {memberTypes,canContribute}=require('../../../lib/member-roles');
 function member(ctx,contributor=false) {
   const user=ctx.state.user;
   if(!user)ctx.throw(401,'Connexion requise.');
-  if(user.blocked||!['authenticated','contributor'].includes(user.role?.type))ctx.throw(403,'Accès membre refusé.');
-  if(contributor&&user.role.type!=='contributor')ctx.throw(403,'Le rôle contributeur doit être attribué par un administrateur.');
+  if(user.blocked||!memberTypes.includes(user.role?.type))ctx.throw(403,'Accès membre refusé.');
+  if(contributor&&!canContribute(user))ctx.throw(403,'Le rôle contributeur doit être attribué par un administrateur.');
   return user;
 }
 async function assistant(ctx,action) {
@@ -31,6 +32,8 @@ async function uploadPhotos(ctx,user,publicationDocumentId=null) {
   }catch(error){for(const file of uploaded)await service.remove(file).catch(()=>{});throw error;}
 }
 module.exports={
+  async directory(ctx){member(ctx);return require('../../../lib/member-directory').list(strapi,ctx);},
+  async memberDetails(ctx){member(ctx);return require('../../../lib/member-directory').details(strapi,ctx);},
   async participationPoll(ctx){return require('../../../lib/participation-polls').read(strapi,ctx,member(ctx));},
   async createParticipationPoll(ctx){return require('../../../lib/participation-polls').create(strapi,ctx,member(ctx,true));},
   async registerParticipation(ctx){return require('../../../lib/participation-polls').register(strapi,ctx,member(ctx));},

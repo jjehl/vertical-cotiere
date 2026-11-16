@@ -51,6 +51,33 @@ membre ne peuvent pas être modifiés avec cet assistant.
 Le retrait du rôle prend effet dès la prochaine requête, y compris avant
 la confirmation d’un aperçu déjà généré.
 
+Le rôle **Administrateur membre** (`member_admin`) est également attribué depuis
+la fiche Membre ou la colonne **Rôle membre** dans Strapi. Il conserve tous les
+droits du contributeur et ajoute **Liste des membres** dans `/compte`, vers
+`/membres`. L’annuaire propose une recherche par nom, prénom, identifiant,
+e-mail, téléphone, ville, code postal ou licence ; les mots saisis sont combinés.
+Les filtres portent sur le rôle et l’état du compte (actif, à confirmer, bloqué).
+Les en-têtes permettent de trier par nom, prénom, e-mail, téléphone, ville,
+licence, rôle ou date de création, dans les deux sens. La pagination côté serveur
+propose 25, 50 ou 100 membres par page.
+
+Chaque fiche `/membres/:id` présente l’identité et les coordonnées, la date de
+naissance lorsqu’elle est enregistrée, la licence, le rôle et l’état du compte,
+les dates de création, de modification et d’invitation, les inscriptions aux
+cours de toutes les saisons, leurs montants, états et références HelloAsso,
+les coordonnées conservées dans les dossiers et les participations aux événements.
+Les cours suivis et les dossiers financés pour d’autres adhérents sont présentés
+séparément. Seules les relations explicites membre/payeur rattachent un dossier :
+une adresse familiale commune ne suffit pas. Les dossiers annulés ne prouvent
+pas un remboursement ; les opérations ultérieures sont à vérifier dans HelloAsso.
+
+Cet accès est en consultation. Il n’ouvre pas l’administration Strapi et ne
+permet pas de changer le profil ou le rôle d’un autre membre. Les routes dédiées
+`/api/member/directory` et `/api/member/directory/:id` vérifient le rôle côté
+serveur à chaque requête, y compris après un retrait du rôle ou un blocage.
+Les pages et réponses sont privées, sans cache. Les mots de passe, jetons
+d’activation/récupération et liens privés de paiement sont exclus des réponses.
+
 ## Assistant et photos
 
 Le contributeur décrit sa demande, joint ses photos puis génère un aperçu.
@@ -154,7 +181,7 @@ Les autres informations personnelles ne sont pas exposées par l’API publique 
 et ne sont pas envoyées à Mistral pour rédiger un article.
 
 Le démarrage configure le rôle d’inscription basique et les permissions des
-deux rôles. La confirmation d’e-mail conserve le réglage Strapi existant ;
+trois rôles. La confirmation d’e-mail conserve le réglage Strapi existant ;
 si elle est activée, il faut aussi configurer l’envoi d’e-mails.
 
 ## Mot de passe oublié et e-mails OVH
@@ -289,6 +316,12 @@ La recette membre utilise une paire de clés et des réponses Google simulées :
 aucun compte ni identifiant Google réel n’est nécessaire pour les tests.
 
 ## Vérifications
+
+La recette `cms/tests/member-directory.integration.cjs`, appelée par la recette
+membre, couvre l’annuaire administrateur (accès refusés, tri, recherche, filtres,
+pagination, cours et payeurs, adresse partagée, absence de secrets et révocation
+immédiate). `frontend/e2e/member-directory.cjs` reçoit la même fixture temporaire
+que `member-area.cjs` et couvre le parcours admin, les fiches et le mobile.
 
 La CI exécute `cms/tests/members.integration.js` avec Mistral simulé et une
 base PostgreSQL temporaire, supprimée à la fin. Elle couvre les profils,

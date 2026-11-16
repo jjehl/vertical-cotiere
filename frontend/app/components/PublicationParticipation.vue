@@ -36,7 +36,7 @@ async function cancel(){confirming.value=false;error.value='';await nextTick();r
 <template>
   <div class="event-aside-heading">
     <span class="eyebrow">Le rendez-vous</span>
-    <button v-if="memberReady&&profile?.role==='contributor'&&poll&&!poll.exists&&poll.open" type="button" class="event-add-poll" :disabled="busy" @click="submit()">
+    <button v-if="memberReady&&(profile?.role==='contributor'||profile?.role==='admin')&&poll&&!poll.exists&&poll.open" type="button" class="event-add-poll" :disabled="busy" @click="submit()">
       <span aria-hidden="true">+</span> {{busy?'Ajout…':'Ajouter un sondage'}}
     </button>
   </div>

@@ -86,6 +86,7 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
     const draftListed=(await request('/api/member/publications',null,token)).body.find(row=>row.documentId===unpublished.documentId);
     assert.equal(draftListed.body,'Contenu privé');assert.equal(draftListed.url,null);assert.equal(draftListed.published,false);
     const pollFixture=await require('./participation-polls.integration.cjs')({app,request,user,token,other,otherToken,basic,contributor,docs,unpublished});
+    const directoryAdmin=await require('./member-directory.integration.cjs')({app,request,user,token,basic,contributor,password});
     const photoForm=(name='community.png',bytes=image)=>{const body=new FormData();body.append('files',new Blob([bytes],{type:'image/png'}),name);return body;};
     const photoPath='/api/member/publications/'+publication.slug+'/photos';
     assert([401,403].includes((await request(photoPath,photoForm())).status));
@@ -203,7 +204,7 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
       const fixture=process.env.MEMBER_UI_FIXTURE;assert.match(fixture,/^\/tmp\/member-ui-[a-z0-9-]+\.json$/);
       await request('/api/auth/forgot-password',{email:user.email});const resetCode=emailLink().searchParams.get('code');
       await fs.rm(fixture+'.done',{force:true});
-      await fs.writeFile(fixture,JSON.stringify({email:user.email,password:password+'reset',resetCode,documentId,...pollFixture,sharedEmail,communitySlug:historical.slug,userId:user.id,basicId:basic.id,contributorId:contributor.id,photoBase64:image.toString('base64')}),{mode:0o600});
+      await fs.writeFile(fixture,JSON.stringify({email:user.email,password:password+'reset',resetCode,documentId,...pollFixture,directoryAdmin,sharedEmail,communitySlug:historical.slug,userId:user.id,basicId:basic.id,contributorId:contributor.id,photoBase64:image.toString('base64')}),{mode:0o600});
       console.log('Recette navigateur membre prête.');
       try{for(let i=0;i<300;i++){try{await fs.access(fixture+'.done');break;}catch{}await new Promise(resolve=>setTimeout(resolve,1000));}}
       finally{await fs.rm(fixture,{force:true});await fs.rm(fixture+'.done',{force:true});}

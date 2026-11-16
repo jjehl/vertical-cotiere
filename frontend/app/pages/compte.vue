@@ -15,7 +15,8 @@ useSeoMeta({title:'Mon profil — Vertical Côtière',robots:'noindex, nofollow'
   <div class="section member-page">
     <span class="eyebrow">Mon espace membre</span><h1>Bonjour,<br><em>{{profile?.firstName||'et bienvenue'}}.</em></h1>
     <nav class="member-actions" aria-label="Mon espace">
-      <NuxtLink v-if="profile?.role==='contributor'" to="/mes-publications" class="button button-dark">Mes publications <ArrowIcon/></NuxtLink>
+      <NuxtLink v-if="profile?.role==='admin'" to="/membres" class="button button-dark">Liste des membres <ArrowIcon/></NuxtLink>
+      <NuxtLink v-if="(profile?.role==='contributor'||profile?.role==='admin')" to="/mes-publications" class="button button-dark">Mes publications <ArrowIcon/></NuxtLink>
       <button type="button" class="button member-logout" :disabled="!interactive" @click="logout">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M9 5H5v14h4m5-12 5 5-5 5m-5-5h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -45,7 +46,7 @@ useSeoMeta({title:'Mon profil — Vertical Côtière',robots:'noindex, nofollow'
         <button class="button button-dark" type="submit" :disabled="busy||!interactive">{{busy?'Enregistrement…':'Enregistrer mon profil'}}</button>
       </form>
       <aside class="member-sidebar">
-        <section class="member-panel"><h2>Mon rôle</h2><p>{{profile?.role==='contributor'?'Contributeur':'Utilisateur basique'}}</p><p>{{profile?.role==='contributor'?'Vous pouvez créer, modifier et publier vos propres publications avec l’assistant IA.':'Vous pouvez consulter et modifier votre profil. Pour contribuer, contactez le club.'}}</p></section>
+        <section class="member-panel"><h2>Mon rôle</h2><p>{{profile?.role==='admin'?'Administrateur membre':profile?.role==='contributor'?'Contributeur':'Utilisateur basique'}}</p><p>{{profile?.role==='admin'?'Vous pouvez consulter les membres, leurs cours et paiements, et gérer vos propres publications.':profile?.role==='contributor'?'Vous pouvez créer, modifier et publier vos propres publications avec l’assistant IA.':'Vous pouvez consulter et modifier votre profil. Pour contribuer, contactez le club.'}}</p></section>
         <section v-if="profile?.googleConnected" class="member-panel"><h2>Connexion Google</h2><p>Votre compte est associé à Google.</p><p v-if="!profile.hasPassword">Pour utiliser aussi un mot de passe, <NuxtLink to="/mot-de-passe-oublie">demandez un lien pour en définir un</NuxtLink>.</p></section>
         <form v-if="profile?.hasPassword" class="member-panel member-form" @submit.prevent="changePassword">
           <h2>Changer mon mot de passe</h2>

@@ -1,6 +1,6 @@
 const editorial=new Set(['title','body','category','meeting','photos']);
 module.exports=function memberPermissions(user) {
-  const contributor=user?.role?.type==='contributor'&&!user.blocked;
+  const contributor=require('./member-roles').canContribute(user);
   const own=entity=>contributor&&(!entity||(typeof entity.memberAuthor==='number'?entity.memberAuthor:entity.memberAuthor?.id)===user.id);
   const clean=data=>Object.fromEntries(Object.entries(data).filter(([key])=>editorial.has(key)));
   return {isMember:true,

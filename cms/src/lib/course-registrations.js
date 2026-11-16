@@ -14,7 +14,7 @@ const open=timetable=>!!timetable?.registrationsOpen&&(!timetable.registrationOp
 function payer(ctx) {
   const user=ctx.state.user;
   if(!user)ctx.throw(401,'Connectez-vous pour inscrire un adhérent.');
-  if(user.blocked||!['authenticated','contributor'].includes(user.role?.type))ctx.throw(403,'Accès membre refusé.');
+  if(user.blocked||!require('./member-roles').memberTypes.includes(user.role?.type))ctx.throw(403,'Accès membre refusé.');
   if(user.confirmed!==true)ctx.throw(403,'Validez votre adresse e-mail avant de vous inscrire.');
   return user;
 }

@@ -1,0 +1,54 @@
+const assert=require('node:assert/strict');
+module.exports=async function({app,request,user,token,basic,contributor,password}) {
+  const users=app.plugin('users-permissions').service('user');
+  const roles=app.db.query('plugin::users-permissions.role');
+  const adminRole=await roles.findOne({where:{type:'member_admin'}});
+  assert(adminRole,'Le rôle administrateur membre est créé au démarrage.');
+  const admin=await users.add({username:'directory.admin',email:'directory-admin@local.invalid',password,firstName:'Admin',lastName:'Annuaire',role:adminRole.id,confirmed:true,provider:'local'});
+  const adminToken=app.plugin('users-permissions').service('jwt').issue({id:admin.id});
+  const account=async(username,lastName,extra={})=>users.add({username,email:'directory-family@local.invalid',password,firstName:'Enfant',lastName,role:basic.id,confirmed:true,provider:'local',...extra});
+  const child=await account('directory.child','Annuaire Alpha',{phone:'0612345678',city:'Beynost',ffmeLicenseNumber:'000987',membershipBirthDate:'2014-05-02'});
+  const sibling=await account('directory.sibling','Annuaire Zulu',{confirmed:false,blocked:true});
+  const registration=await app.db.query('api::course-registration.course-registration').create({data:{reference:'directory-test-reference',season:'2026–2027',slotCode:'directory-course',slotLabel:'Jeunes · mercredi 17:00–18:30',firstName:child.firstName,lastName:child.lastName,birthDate:'2014-05-02',email:child.email,address:'1 rue du Club, Beynost',payerFirstName:admin.firstName,payerLastName:admin.lastName,payerEmail:admin.email,amountCents:18000,registrationStatus:'confirmed',confirmedAt:new Date().toISOString(),checkoutIntentId:'directory-checkout',checkoutUrl:'https://secret-checkout.invalid',participantKey:'directory-secret-key',sessionHash:'directory-secret-hash',member:child.id,payer:admin.id}});
+  const path='/api/member/directory';
+  assert.equal((await request(path+'?q&role&status&sort=lastName&direction=asc&page=1&pageSize=25',null,adminToken)).status,200);
+  assert([401,403].includes((await request(path)).status));
+  for(const role of [basic,contributor]) {
+    await users.edit(user.id,{role:role.id});
+    assert.equal((await request(path,null,token)).status,403);
+    assert.equal((await request(path+'/'+child.id,null,token)).status,403);
+  }
+  assert.equal((await request('/api/member/me',null,adminToken)).body.role,'admin');
+  for(const route of ['/api/member/publications','/api/member/assistant/status'])assert.equal((await request(route,null,adminToken)).status,200);
+  assert.equal((await request('/api/member/assistant/publications/'+(await app.documents('api::publication.publication').findFirst({status:'draft',filters:{memberAuthor:user.id}})).documentId,null,adminToken)).status,403);
+  for(const route of ['/api/users','/api/users/'+child.id,'/admin/users/me'])assert([401,403].includes((await request(route,null,adminToken)).status));
+  assert.equal((await request('/api/member/profile',{role:adminRole.id},token,'PUT')).status,400);
+  assert.equal((await request('/api/auth/local/register',{username:'directory.escalation',email:admin.email,password,role:adminRole.id})).status,400);
+  const list=await request(path+'?q=Annuaire&sort=lastName&direction=asc&pageSize=1',null,adminToken);
+  assert.equal(list.status,200,JSON.stringify(list.body));assert.equal(list.body.members.length,1);assert.equal(list.body.pagination.total,3);assert.equal(list.body.pagination.pageCount,3);
+  const page2=await request(path+'?q=Annuaire&sort=lastName&direction=asc&pageSize=1&page=2',null,adminToken);
+  assert.notEqual(page2.body.members[0].id,list.body.members[0].id);
+  const reverse=await request(path+'?q=Annuaire&sort=lastName&direction=desc',null,adminToken);
+  assert.equal(reverse.body.members[0].id,sibling.id);
+  for(const sort of ['firstName','username','email','phone','postalCode','city','ffmeLicenseNumber','createdAt','confirmed','blocked','role'])assert.equal((await request(path+'?sort='+sort,null,adminToken)).status,200,sort);
+  const filtered=await request(path+'?q=ENFANT%20Alpha&role=basic&status=active',null,adminToken);
+  assert.deepEqual(filtered.body.members.map(row=>row.id),[child.id]);
+  assert.equal((await request(path+'?q=Annuaire&status=blocked',null,adminToken)).body.members[0].id,sibling.id);
+  for(const query of ['sort=password','direction=invalid','page=0','pageSize=101','role=public','q[x]=secret','page=1.5'])assert.equal((await request(path+'?'+query,null,adminToken)).status,400,query);
+  for(const id of ['0','abc','999999999999999999999','999999'])assert.equal((await request(path+'/'+id,null,adminToken)).status,404);
+  const details=await request(path+'/'+child.id,null,adminToken);
+  assert.equal(details.status,200,JSON.stringify(details.body));assert.equal(details.body.member.ffmeLicenseNumber,'000987');assert.equal(details.body.member.membershipBirthDate,'2014-05-02');
+  assert.equal(details.body.registrations[0].id,registration.id);assert.equal(details.body.registrations[0].isParticipant,true);assert.equal(details.body.registrations[0].isPayer,false);assert.equal(details.body.registrations[0].payer.id,admin.id);assert.equal(details.body.registrations[0].amountCents,18000);
+  assert.equal((await request(path+'/'+sibling.id,null,adminToken)).body.registrations.length,0,'Une adresse partagée ne rattache pas les dossiers des autres comptes.');
+  const payer=(await request(path+'/'+admin.id,null,adminToken)).body;
+  assert.equal(payer.registrations[0].isPayer,true);assert.equal(payer.registrations[0].isParticipant,false);
+  const participant=(await request(path+'/'+user.id,null,adminToken)).body;
+  assert(participant.participations.length>0);assert(participant.participations.some(item=>item.title&&item.registeredByMember));
+  for(const body of [list.body,details.body,payer,participant])for(const secret of ['password','resetPasswordToken','confirmationToken','googleSubject','registrationInviteToken','sessionHash','participantKey','checkoutUrl','directory-secret','secret-checkout'])assert(!JSON.stringify(body).includes(secret),secret);
+  // Tokens remain valid while roles and blocked flags are checked on every request.
+  await users.edit(admin.id,{role:contributor.id});assert.equal((await request(path,null,adminToken)).status,403);assert.equal((await request(path+'/'+child.id,null,adminToken)).status,403);
+  await users.edit(admin.id,{role:adminRole.id,blocked:true});assert([401,403].includes((await request(path,null,adminToken)).status));
+  await users.edit(admin.id,{blocked:false});assert.equal((await request(path,null,adminToken)).status,200);
+  console.log('OK : administrateur membre, annuaire triable et paginé, dossiers adhérent/payeur, confidentialité et révocation immédiate.');
+  return {email:admin.email,password,childId:child.id,childName:child.lastName};
+};

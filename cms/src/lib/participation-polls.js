@@ -2,7 +2,7 @@ const {meetingDto}=require('./publication-dto');
 const pollUid='api::participation-poll.participation-poll';
 const participationUid='api::event-participation.event-participation';
 const memberUid='plugin::users-permissions.user';
-const activeMember={blocked:false,confirmed:true,role:{type:{$in:['authenticated','contributor']}}};
+const activeMember={blocked:false,confirmed:true,role:{type:{$in:require('./member-roles').memberTypes}}};
 const memberName=user=>[user.firstName,user.lastName].filter(Boolean).join(' ').trim()||'Un membre';
 
 // Keep registrations separate from editorial drafts and published versions.

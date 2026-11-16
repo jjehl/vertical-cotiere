@@ -4,7 +4,7 @@ const route=useRoute();
 const {profile,api,refresh:refreshMember}=useMember();
 const memberReady=ref(false);
 const ownPhotoIds=ref<number[]>([]);const photoMessage=ref('');
-const canAddPhotos=computed(()=>memberReady.value&&profile.value?.role==='contributor');
+const canAddPhotos=computed(()=>memberReady.value&&(profile.value?.role==='contributor'||profile.value?.role==='admin'));
 async function refreshPhotoOwnership(){
   if(!profile.value){ownPhotoIds.value=[];return;}
   try{ownPhotoIds.value=(await api<{ids:number[]}>('/api/member/publications/'+encodeURIComponent(String(route.params.slug))+'/photos')).ids;}

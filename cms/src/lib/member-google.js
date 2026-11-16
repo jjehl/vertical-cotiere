@@ -30,7 +30,7 @@ async function readPending(app,token) {
   }catch{throw invalid();}
 }
 const account=({id,username,firstName,lastName})=>({id,username,firstName:firstName||'',lastName:lastName||''});
-const allowed=user=>user&&!user.blocked&&user.confirmed&&['authenticated','contributor'].includes(user.role?.type);
+const allowed=user=>user&&!user.blocked&&user.confirmed&&require('./member-roles').memberTypes.includes(user.role?.type);
 const session=(app,user)=>({jwt:app.plugin('users-permissions').service('jwt').issue({id:user.id})});
 async function lockSubject(trx,subject){await trx.raw('SELECT pg_advisory_xact_lock(2672029, hashtext(?))',[subject]);}
 

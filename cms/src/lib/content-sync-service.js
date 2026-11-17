@@ -68,7 +68,7 @@ async function prepareMedia(app,data,{lists=['photos','attachments'],singles=['c
   for(const id of ids){
     const file=await app.db.query('plugin::upload.file').findOne({where:{id:Number(id)}});
     if(!file)fail(422,'Fichier source introuvable : '+id);
-    files.push({id:String(file.id),name:file.name,mime:file.mime,alternativeText:file.alternativeText||'',caption:file.caption||''});
+    files.push({id:String(file.id),name:file.name,mime:file.mime,alternativeText:file.alternativeText||'',caption:file.caption||'',focalPoint:file.focalPoint??null});
     // Inline files also need a public relation on their owning content.
     for(const [status,version] of Object.entries(data))if(version&&embedded[status].has(id)&&!lists.some(key=>version[key].includes(id))&&!singles.some(key=>version[key]===id)){
       const field=lists.includes('photos')&&file.mime.startsWith('image/')?'photos':lists.includes('attachments')?'attachments':null;
@@ -97,15 +97,20 @@ async function download(app,id){
   return {file,stream:Readable.fromWeb(response.body)};
 }
 async function mediaMapping(app,publication){
-  const mapping=new Map(),symbolic=new Map(),missing=[];
+  const mapping=new Map(),symbolic=new Map(),missing=[],conflicts=[];
   for(const file of publication.files){
     const key=model.mediaKey(file);symbolic.set(file.id,key);
     const record=await store(app,'media-'+key).get();
     const exists=record&&await app.db.query('plugin::upload.file').findOne({where:{id:record.id}});
-    if(exists)mapping.set(file.id,String(record.id));
+    if(exists){
+      mapping.set(file.id,String(record.id));
+      const framing=model.focalPointChange(file,record,exists);
+      if(framing.conflict)conflicts.push('Cadrage modifié sur la source et la cible : '+file.name);
+      else if(framing.update)missing.push(file);
+    }
     else {mapping.set(file.id,'pending-'+key);missing.push(file);}
   }
-  return {mapping,symbolic,missing};
+  return {mapping,symbolic,missing,conflicts};
 }
 async function plan(app,publication,{adoptSlug=false,trx}={}){
   try{model.validatePublication(publication);}catch(error){fail(400,error.message);}
@@ -128,17 +133,17 @@ async function plan(app,publication,{adoptSlug=false,trx}={}){
     await trx(metadata.tableName).where(metadata.attributes.documentId.columnName,documentId).forUpdate();
   }
   const current=documentId?await versions(app,documentId):{draft:null,published:null};
-  const {mapping,symbolic,missing}=await mediaMapping(app,publication);
+  const {mapping,symbolic,missing,conflicts:mediaConflicts}=await mediaMapping(app,publication);
   const incoming={draft:model.mapData(publication.draft,symbolic),published:model.mapData(publication.published,symbolic)};
   const desired={draft:model.mapData(publication.draft,mapping),published:model.mapData(publication.published,mapping)};
-  const merged={},baseline={},conflicts=[];
+  const merged={},baseline={},conflicts=[...mediaConflicts];
   for(const version of ['draft','published']){
     const result=model.mergeVersion(incoming[version],record?.source?.[version],current[version],record?.target?.[version],desired[version]);
     merged[version]=result.data;baseline[version]=result.baseline;
     conflicts.push(...result.conflicts.map(field=>version+'.'+field));
   }
   if(conflicts.length)return {action:'conflict',conflicts,key,documentId};
-  const action=!documentId?'create':model.equal(current,merged)?'unchanged':'update';
+  const action=!documentId?'create':model.equal(current,merged)&&!missing.length?'unchanged':'update';
   return {action,key,documentId,incoming,merged,baseline,current,missingFiles:action==='unchanged'?[]:missing,adopted:!record&&Boolean(documentId)};
 }
 const publicPlan=result=>({action:result.action,documentId:result.documentId,conflicts:result.conflicts||[],missingFiles:result.missingFiles||[],adopted:result.adopted||false});
@@ -173,10 +178,20 @@ async function upload(app,file,metadata){
   let uploaded,recovered;
   const persist=incoming=>locked(app,async()=>{
     const entry=store(app,'media-'+model.mediaKey(descriptor)),old=await entry.get();
-    if(old&&await app.db.query('plugin::upload.file').findOne({where:{id:old.id}}))return {id:old.id,reused:true};
+    const existing=old&&await app.db.query('plugin::upload.file').findOne({where:{id:old.id}});
+    if(existing){
+      const framing=model.focalPointChange(descriptor,old,existing);
+      if(framing.conflict)fail(409,'Cadrage modifié sur la source et la cible : '+descriptor.name);
+      if(framing.update){
+        await app.db.query('plugin::upload.file').update({where:{id:old.id},data:{focalPoint:framing.point}});
+        await entry.set({value:{...old,sourceFocalPoint:framing.point,targetFocalPoint:framing.point}});
+      }
+      return {id:old.id,reused:true,metadataUpdated:!!framing.update};
+    }
     const {name,alternativeText,caption,mime}=descriptor;
-    const files=await app.plugin('upload').service('upload').upload({data:{fileInfo:{name,alternativeText,caption}},files:{...incoming,originalFilename:name,mimetype:mime}});
-    uploaded=files[0];await entry.set({value:{id:uploaded.id}});return {id:uploaded.id,reused:false};
+    const framing=Object.hasOwn(descriptor,'focalPoint')?{focalPoint:descriptor.focalPoint}:{};
+    const files=await app.plugin('upload').service('upload').upload({data:{fileInfo:{name,alternativeText,caption,...framing}},files:{...incoming,originalFilename:name,mimetype:mime}});
+    uploaded=files[0];await entry.set({value:{id:uploaded.id,sourceFocalPoint:descriptor.focalPoint??null,targetFocalPoint:descriptor.focalPoint??null}});return {id:uploaded.id,reused:false};
   });
   try{
     try{return await persist(file);}catch(error){

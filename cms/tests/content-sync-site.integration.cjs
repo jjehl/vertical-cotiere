@@ -48,7 +48,18 @@ module.exports=async function({app,request,sourceToken,targetToken,photo,attachm
   assert.equal(catalog.open,true);assert.equal(catalog.sessions[0].remaining,18);assert.deepEqual(catalog.sessions[0].prices,{STANDARD:20000,CCMP1OU2:19000,FAM:18000,CCMP3:17000});
   const publicResponse=await fetch('http://127.0.0.1:1349/api/site-content');assert.equal(publicResponse.status,200);const publicContent=await publicResponse.json();
   const publicPage=publicContent.pages.find(row=>row.slug==='page-site-sync');assert(publicPage.bodyHtml.includes('/media/'+document.file.id));assert.equal(publicPage.documents[0].slug,'document-site-sync');
-  assert.equal(publicContent.activities.find(row=>row.slug==='cours-site-sync').title,'Cours transférable');assert.equal(publicContent.timetable.ufraps.closedDays[0].date,'2027-05-01');
+  assert.equal(publicContent.activities.find(row=>row.slug==='cours-site-sync').title,'Cours transférable');assert.equal(publicContent.activities.find(row=>row.slug==='cours-site-sync').imagePosition,'100% 45%');assert.equal(publicContent.timetable.ufraps.closedDays[0].date,'2027-05-01');
+  const image=contents.activities.files.find(file=>file.id===String(photo.id));
+  const mediaStore=require('../src/lib/content-sync-service').store(app,'media-'+require('../src/lib/content-sync-model').mediaKey(image));
+  const mediaRecord=await mediaStore.get();
+  await mediaStore.set({value:{id:mediaRecord.id}});
+  await app.db.query('plugin::upload.file').update({where:{id:mediaRecord.id},data:{focalPoint:null}});
+  const framingPreview=await request('plan',{content:contents.activities},targetToken);assert.equal(framingPreview.body.action,'update');assert.deepEqual(framingPreview.body.missingFiles.map(file=>file.id),[image.id]);
+  assert.equal((await app.db.query('plugin::upload.file').findOne({where:{id:mediaRecord.id}})).focalPoint,null);
+  const imageForm=new FormData();imageForm.append('metadata',JSON.stringify(image));imageForm.append('files',new Blob([bytes.get(image.id)],{type:image.mime}),image.name);
+  const framingUpdate=await request('files',imageForm,targetToken);assert.equal(framingUpdate.status,200);assert.equal(framingUpdate.body.id,mediaRecord.id);
+  const repairedPublic=await(await fetch('http://127.0.0.1:1349/api/site-content')).json();assert.equal(repairedPublic.activities.find(row=>row.slug==='cours-site-sync').imagePosition,'100% 45%');
+  assert.equal((await request('plan',{content:contents.activities},targetToken)).body.action,'unchanged');
   // Independent edits of the same course merge by registrationCode and by field.
   await timetables.update({documentId:targets.timetable,data:{sessions:[{...model.dataFromRow('timetable',timetable).sessions[0],capacity:25}]},status:'published'});
   for(const version of ['draft','published'])contents.timetable[version].sessions[0].priceCents=21000;

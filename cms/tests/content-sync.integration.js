@@ -38,15 +38,15 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
     const png=await require('sharp')({create:{width:40,height:30,channels:3,background:'#224466'}}).png().toBuffer();
     const pdf=Buffer.from('%PDF-1.4\nrecette\n');
     const bytes=new Map();
-    async function file(name,buffer,mime){
+    async function file(name,buffer,mime,focalPoint=null){
       const filepath=path.join(directory,name);await fs.writeFile(filepath,buffer);
-      const [media]=await app.plugin('upload').service('upload').upload({data:{fileInfo:{name,alternativeText:'Description',caption:'Légende'}},files:{filepath,originalFilename:name,mimetype:mime,size:buffer.length}});
+      const [media]=await app.plugin('upload').service('upload').upload({data:{fileInfo:{name,alternativeText:'Description',caption:'Légende',focalPoint}},files:{filepath,originalFilename:name,mimetype:mime,size:buffer.length}});
       uploads.push(media);
       // Strapi may optimize image bytes on upload; transfer the stored original, not the input PNG.
       const original=await fetch(base+'/api/content-sync/files/'+media.id,{headers:{Authorization:'Bearer '+sourceToken}});
       assert.equal(original.status,200);bytes.set(String(media.id),Buffer.from(await original.arrayBuffer()));return media;
     }
-    const photo=await file('sync-photo.png',png,'image/png'),community=await file('sync-community.png',png,'image/png'),attachment=await file('sync.pdf',pdf,'application/pdf');
+    const photo=await file('sync-photo.png',png,'image/png',{x:100,y:45}),community=await file('sync-community.png',png,'image/png'),attachment=await file('sync.pdf',pdf,'application/pdf');
     const docs=app.documents('api::publication.publication');
     const source=await docs.create({data:{title:'Sortie transférée',slug:'sortie-sync',body:'Version publiée',category:'Sortie',photos:[photo.id],coverImage:photo.id,legacyBody:'Version publiée',legacyHtml:'<p>Photo <img src="/media/'+photo.id+'"><a href="/media/'+attachment.id+'">Document intégré</a></p>',meeting:{start:'2027-06-01T08:00:00.000Z',calendarUid:'identite-source@club'}},status:'published'});
     await docs.update({documentId:source.documentId,data:{body:'Brouillon privé'}});
@@ -72,6 +72,7 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
     for(const descriptor of publication.files){
       const form=()=>{const result=new FormData();result.append('metadata',JSON.stringify(descriptor));result.append('files',new Blob([bytes.get(descriptor.id)],{type:descriptor.mime}),descriptor.name);return result;};
       const result=await request('files',form(),targetToken);assert.equal(result.status,200,JSON.stringify(result.body));
+      assert.deepEqual((await app.db.query('plugin::upload.file').findOne({where:{id:result.body.id}})).focalPoint,descriptor.focalPoint);
       const existing=await request('files',form(),targetToken);assert.equal(existing.body.id,result.body.id);assert.equal(existing.body.reused,true);
       uploads.push({id:result.body.id});
     }
@@ -98,6 +99,7 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
     assert.equal(publicFile.status,200); // An inline-only source file is publicly accessible after import.
     assert.equal(await app.db.query('plugin::users-permissions.user').count(),usersBefore);
     assert.equal((await request('import',{publication},targetToken)).body.action,'unchanged');
+    await require('./content-sync-focal-point.integration.cjs')({app,request,targetToken,publication,photo,bytes});
     assert(await docs.findOne({documentId:unrelated.documentId}));
     // Independent edits merge, including destination-only community photos.
     await docs.update({documentId,data:{title:'Titre recette'}});

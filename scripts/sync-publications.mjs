@@ -134,7 +134,10 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
           const cached=cache.get(content.sourceId+':'+file.id);
           const form=new FormData();form.append('metadata',JSON.stringify(file));
           form.append('files',new Blob([await readFile(cached.filepath)],{type:file.mime}),file.name);
-          try{await(await request('target','/api/content-sync/files',{method:'POST',form})).json();}
+          try{
+            const uploaded=await(await request('target','/api/content-sync/files',{method:'POST',form})).json();
+            if(uploaded.metadataUpdated)log('Cadrage mis à jour : '+JSON.stringify(file.name));
+          }
           catch(error){throw Error('Fichier '+JSON.stringify(file.name)+' (source '+file.id+') — '+error.message);}
         }
         result=await jsonRequest('target',route+'import',payload);

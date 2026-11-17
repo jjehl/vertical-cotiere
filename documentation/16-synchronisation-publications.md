@@ -321,6 +321,17 @@ le contenu **et** les métadonnées du fichier : deux fichiers de même contenu 
 noms ou légendes différents restent distincts. Un fichier déjà présent avant cette
 fonctionnalité n’est pas automatiquement rapproché sans correspondance connue.
 
+Le point de cadrage Strapi (`focalPoint`, coordonnées `x` et `y` de 0 à 100)
+est également transféré. Une modification du cadrage réutilise le média cible :
+son identifiant, son URL et ses variantes restent les mêmes. Une relance répare
+aussi les cadrages perdus par une ancienne version de la synchronisation, même
+si les champs éditoriaux sont inchangés. La commande affiche alors
+`Cadrage mis à jour`. L’aperçu détecte cette mise à jour sans l’appliquer.
+Un cadrage modifié uniquement sur la cible est conservé ; des changements
+incompatibles des deux côtés provoquent un conflit. Un ancien export sans
+`focalPoint` ne modifie pas le cadrage cible. Mettre les deux CMS à jour avant de
+relancer la synchronisation des activités concernées.
+
 Les relations `photos`, `attachments` et `coverImage` sont recréées avec les IDs de
 la cible. Les liens `/media/:id` intégrés au texte ou au HTML historique sont réécrits.
 Les liens historiques connus `/imports/`, `/gallery/` et `/document-files/:slug` sont

@@ -62,7 +62,7 @@ async function plan(app,content,{adoptSlug=false,trx}={}){
   if(trx&&documentId){const metadata=app.db.metadata.get(config.uid);await trx(metadata.tableName).where(metadata.attributes.documentId.columnName,documentId).forUpdate();}
   const current=documentId?await versions(app,content.type,documentId):{draft:null,published:null};
   const media=await common.mediaMapping(app,content),references=await referenceMapping(app,content);
-  const incoming={},desired={},merged={},baseline={},conflicts=[];
+  const incoming={},desired={},merged={},baseline={},conflicts=[...media.conflicts];
   for(const version of ['draft','published']){
     incoming[version]=model.mapData(content.type,content[version],media.symbolic,references.symbolic);
     desired[version]=model.mapData(content.type,content[version],media.mapping,references.mapping);
@@ -76,7 +76,7 @@ async function plan(app,content,{adoptSlug=false,trx}={}){
     conflicts.push(...(await registrationConflicts(app,merged.published,current.published)).map(field=>'published.'+field));
   }
   if(conflicts.length)return {action:'conflict',conflicts,key,documentId};
-  const action=!documentId?'create':equal(current,merged)?'unchanged':'update';
+  const action=!documentId?'create':equal(current,merged)&&!media.missing.length?'unchanged':'update';
   return {action,key,documentId,incoming,merged,baseline,current,missingFiles:action==='unchanged'?[]:media.missing,missingReferences:references.missing,adopted:!record&&Boolean(documentId)};
 }
 const publicPlan=result=>({...common.publicPlan(result),missingReferences:result.missingReferences||[]});

@@ -9,6 +9,13 @@ const canonical=value=>JSON.stringify(value,(_,v)=>v&&typeof v==='object'&&!Arra
 const equal=(a,b)=>canonical(a)===canonical(b);
 const digest=value=>createHash('sha256').update(typeof value==='string'?value:canonical(value)).digest('hex');
 const mediaKey=file=>digest([file.sha256,file.name,file.mime,file.alternativeText||'',file.caption||'']);
+// Framing changes update the existing media; they never create another photo.
+function focalPointChange(file,record,current){
+  if(!Object.hasOwn(file,'focalPoint')||equal(file.focalPoint,record?.sourceFocalPoint??null))return {update:false};
+  const actual=current.focalPoint??null;
+  if(!equal(actual,record?.targetFocalPoint??null)&&!equal(actual,file.focalPoint))return {conflict:true};
+  return {update:true,point:file.focalPoint};
+}
 function dataFromRow(row){
   if(!row)return null;
   const data=Object.fromEntries(fields.map(key=>[key,row[key]??null]));
@@ -26,6 +33,10 @@ function validatePublication(value){
     seen.add(file.id);
     for(const key of ['name','mime','alternativeText','caption'])if(typeof file[key]!=='string'||file[key].length>(key==='caption'?10000:1000))fail('métadonnées de fichier');
     if(!file.name||!file.mime)fail('nom ou type de fichier');
+    if(Object.hasOwn(file,'focalPoint')&&file.focalPoint!==null){
+      const point=file.focalPoint;
+      if(!point||typeof point!=='object'||Array.isArray(point)||Object.keys(point).length!==2||!['x','y'].every(key=>Number.isFinite(point[key])&&point[key]>=0&&point[key]<=100))fail('point de cadrage');
+    }
   }
   for(const [version,data] of Object.entries({draft:value.draft,published:value.published})){
     if(data===null&&version==='published')continue;
@@ -69,4 +80,4 @@ function mergeVersion(incoming,sourceBase,current,targetBase,desired){
   }
   return {data,baseline,conflicts};
 }
-module.exports={fields,meetingFields,canonical,equal,digest,mediaKey,mediaPattern,dataFromRow,validatePublication,mapData,mergeVersion};
+module.exports={fields,meetingFields,canonical,equal,digest,mediaKey,focalPointChange,mediaPattern,dataFromRow,validatePublication,mapData,mergeVersion};

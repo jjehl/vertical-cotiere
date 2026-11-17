@@ -7,6 +7,14 @@ const editing=Boolean(props.documentId);
 const source=ref<MemberSource|null>(null);const instruction=ref('');const photos=ref<MemberPhoto[]>([]);const preview=ref<MemberPreview|null>(null);
 const question=ref('');const error=ref('');const busy=ref('');const saved=ref<{documentId:string;title:string;published:boolean}|null>(null);
 const preparing=computed(()=>busy.value==='Préparation de la proposition…');
+const elapsedSeconds=ref(0);
+let preparationTimer:ReturnType<typeof setInterval>|undefined;
+function stopPreparationTimer(){clearInterval(preparationTimer);preparationTimer=undefined;}
+watch(preparing,value=>{
+  stopPreparationTimer();elapsedSeconds.value=0;
+  if(value){const started=performance.now();preparationTimer=setInterval(()=>{elapsedSeconds.value=Math.floor((performance.now()-started)/1000);},1000);}
+},{flush:'sync'});
+onUnmounted(stopPreparationTimer);
 const {data:status}=await useAsyncData('member-assistant-status',()=>api<{configured:boolean;canCreate:boolean}>('/api/member/assistant/status'));
 async function load(){source.value=await api<MemberSource>('/api/member/assistant/publications/'+encodeURIComponent(props.documentId!));photos.value=source.value.photos.map(photo=>({...photo,url:'/api/member/photos/'+photo.id}));}
 if(editing)try{await load();}catch(value){error.value=memberError(value);}
@@ -19,7 +27,7 @@ async function upload(event:Event){
   invalidate();await run('Import des photos…',async()=>{const body=new FormData();files.forEach(file=>body.append('files',file));photos.value.push(...(await api<MemberPhoto[]>('/api/member/photos',{method:'POST',body})).map(photo=>({...photo,url:'/api/member/photos/'+photo.id})));});
 }
 async function prepare(){invalidate();await run('Préparation de la proposition…',async()=>{
-  const result=await api<MemberPreview&{question?:string}>('/api/member/assistant/prepare',{method:'POST',body:{instruction:instruction.value,...(editing?{documentId:props.documentId,version:source.value!.version}:{photos:photos.value.map(photo=>photo.id)})}});
+  const result=await api<MemberPreview&{question?:string}>('/api/member/assistant/prepare',{method:'POST',timeout:150000,body:{instruction:instruction.value,...(editing?{documentId:props.documentId,version:source.value!.version}:{photos:photos.value.map(photo=>photo.id)})}});
   if(result.question)question.value=result.question;else preview.value=result;
 });}
 async function confirm(mode:'draft'|'publish'){if(!preview.value)return;await run('Enregistrement…',async()=>{
@@ -63,11 +71,12 @@ async function confirm(mode:'draft'|'publish'){if(!preview.value)return;await ru
       </section>
       <section class="member-panel" aria-labelledby="member-preview-title">
         <h2 id="member-preview-title">2. Vérifiez et confirmez</h2>
-        <div v-if="busy" class="member-processing" role="status" aria-atomic="true">
+        <div v-if="busy" class="member-processing">
           <span class="member-spinner" aria-hidden="true"/>
           <div>
-            <strong>{{preparing?'L’IA prépare votre proposition…':busy}}</strong>
-            <p v-if="preparing">Votre demande est en cours de traitement. La réponse peut prendre quelques dizaines de secondes.</p>
+            <strong role="status">{{preparing?'L’IA prépare votre proposition…':busy}}</strong>
+            <p v-if="preparing">Votre demande est en cours de traitement. La réponse peut prendre jusqu’à deux minutes.</p>
+            <p v-if="preparing" role="timer" aria-live="off">{{elapsedSeconds}} s écoulée{{elapsedSeconds>1?'s':''}}</p>
           </div>
         </div>
         <p v-if="error" class="member-error" role="alert">{{error}}</p>

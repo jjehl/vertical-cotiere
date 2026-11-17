@@ -1,5 +1,6 @@
 const service=require('../../../lib/content-sync-service');
 const site=require('../../../lib/content-sync-site-service');
+const members=require('../../../lib/content-sync-members-service');
 const types=require('../../../lib/content-sync-site-model').types;
 const handle=action=>async ctx=>{
   try{return await action(ctx);}catch(error){
@@ -33,5 +34,18 @@ module.exports={
     let metadata;try{metadata=JSON.parse(ctx.request.body?.metadata);}catch{ctx.throw(400,'Métadonnées JSON requises.');}
     const files=ctx.request.files?.files;const file=Array.isArray(files)&&files.length===1?files[0]:files;
     ctx.body=await service.upload(strapi,file,metadata);
+  }),
+  membersExport:handle(async ctx=>{
+    const page=Number(ctx.query.page||1),pageSize=Number(ctx.query.pageSize||10);
+    if(Object.keys(ctx.query).some(key=>!['page','pageSize'].includes(key))||!Number.isSafeInteger(page)||page<1||!Number.isSafeInteger(pageSize)||pageSize<1||pageSize>25)ctx.throw(400,'Pagination invalide.');
+    ctx.set('Cache-Control','private, no-store');ctx.body=await members.exportPage(strapi,{page,pageSize});
+  }),
+  membersPlan:handle(async ctx=>{
+    const {content,adoptSlug}=input(ctx);if(!content||adoptSlug)ctx.throw(400,'Rapprochement de membre non autorisé.');
+    ctx.set('Cache-Control','private, no-store');ctx.body=members.publicPlan(await members.plan(strapi,content));
+  }),
+  membersImport:handle(async ctx=>{
+    const {content,adoptSlug}=input(ctx);if(!content||adoptSlug)ctx.throw(400,'Rapprochement de membre non autorisé.');
+    ctx.set('Cache-Control','private, no-store');ctx.body=await members.importContent(strapi,content);
   }),
 };

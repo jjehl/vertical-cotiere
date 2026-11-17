@@ -4,6 +4,7 @@ module.exports={routes:[
   ['GET','/member/publications','publications'],['POST','/member/photos','photos'],['GET','/member/photos/:id','photo'],
   ['POST','/member/publications/:slug/photos','publicationPhotos'],
   ['GET','/member/publications/:slug/photos','publicationPhotoIds'],
+  ['PUT','/member/publications/:slug/photos','reorderPublicationPhotos'],
   ['DELETE','/member/publications/:slug/photos/:id','deletePublicationPhoto'],
   ['GET','/member/publications/:slug/poll','participationPoll'],
   ['POST','/member/publications/:slug/poll','createParticipationPoll'],

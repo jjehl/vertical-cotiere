@@ -2017,6 +2017,19 @@ em {
 .publication-photo-delete .member-error {margin:4px 0;font-size:11px}
 .publication-gallery-heading {display:flex;gap:20px 28px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px}
 .publication-gallery-heading h2 {margin:0}
+.publication-gallery-actions {display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.photo-order-toolbar {padding:18px;margin-bottom:20px;border:1px solid var(--line);border-radius:8px;background:#eaf0e5}
+.photo-order-toolbar>p {margin:0 0 12px}
+.photo-order-toolbar>.member-error {margin:12px 0 0}
+.photo-order-actions {display:flex;gap:12px;flex-wrap:wrap}
+.photo-order-item {padding:6px;border:2px solid var(--line);border-radius:8px}
+.photo-order-dragging {opacity:.45}
+.photo-order-target {border-color:var(--orange);background:#eaf0e5}
+.photo-order-controls {display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.photo-grid .photo-order-controls button {width:auto;min-width:36px;min-height:36px;padding:6px 9px;border:1px solid var(--line);border-radius:5px;font:inherit;font-size:12px;color:var(--forest);background:var(--paper)}
+.photo-grid .photo-order-controls button:disabled {opacity:.4;cursor:default}
+.photo-grid .photo-order-controls .photo-order-handle {cursor:grab;touch-action:auto}
+.photo-order-handle:active {cursor:grabbing}
 .publication-photo-upload {max-width:100%;min-width:0}
 .publication-photo-upload>p {margin:8px 0 0;font-size:12px;line-height:1.6}
 .publication-photo-upload>p:empty {display:none}

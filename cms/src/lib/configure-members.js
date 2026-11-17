@@ -10,7 +10,7 @@ module.exports=async function configureMembers(strapi) {
   await roles.update({where:{id:basic.id},data:{name:'Utilisateur basique',description:'Consultation et modification de son profil personnel.'}});
   const permissions=strapi.db.query('plugin::users-permissions.permission');
   const profile=['me','updateProfile','password','publicationPhotoIds','deletePublicationPhoto','participationPoll','registerParticipation','searchParticipationMembers'];
-  const contribution=['publications','assistantStatus','assistantPublication','assistantPrepare','assistantConfirm','photos','photo','publicationPhotos','createParticipationPoll'];
+  const contribution=['publications','assistantStatus','assistantPublication','assistantPrepare','assistantConfirm','photos','photo','publicationPhotos','reorderPublicationPhotos','createParticipationPoll'];
   const directory=['directory','memberDetails'];
   for(const role of [basic,contributor,memberAdmin]) {
     for(const name of ['checkout','status']) {

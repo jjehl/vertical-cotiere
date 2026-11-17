@@ -38,6 +38,15 @@ function AssistantForm({documentId}) {
   const [question,setQuestion] = useState('');
   const [error,setError] = useState('');
   const [busy,setBusy] = useState('');
+  const preparing=busy==='Préparation de la proposition…';
+  const [elapsedSeconds,setElapsedSeconds]=useState(0);
+  useEffect(()=>{
+    setElapsedSeconds(0);
+    if(!preparing)return;
+    const started=performance.now();
+    const timer=setInterval(()=>setElapsedSeconds(Math.floor((performance.now()-started)/1000)),1000);
+    return()=>clearInterval(timer);
+  },[preparing]);
   const [saved,setSaved] = useState(null);
   const lock = useRef(false);
   useEffect(() => { let live=true; client.get(base+'/status').then(({data})=>{if(live)setStatus(data);}).catch(error=>{if(live)setError(errorMessage(error));}); return()=>{live=false;}; },[]);
@@ -109,7 +118,12 @@ function AssistantForm({documentId}) {
       </section>
       <section className="vc-assistant__panel" aria-labelledby="vc-preview-heading" aria-busy={!!busy}>
         <h2 id="vc-preview-heading">2. Vérifiez et confirmez</h2>
-        {busy&&<p role="status">{busy}</p>}
+        {busy&&<div className="vc-assistant__processing">
+          <span className="vc-assistant__spinner" aria-hidden="true"/>
+          <div><p role="status">{busy}</p>
+            {preparing&&<><p>La réponse peut prendre jusqu’à deux minutes.</p><p role="timer" aria-live="off">{elapsedSeconds} s écoulée{elapsedSeconds>1?'s':''}</p></>}
+          </div>
+        </div>}
         {error&&<p className="vc-assistant__error" role="alert">{error}</p>}
         {question&&<div className="vc-assistant__notice"><h3>Une précision est nécessaire</h3><p>{question}</p><p>Complétez votre demande à gauche, puis relancez la préparation.</p></div>}
         {!preview&&!saved&&!question&&!busy&&<p className="vc-assistant__empty">{editing?'La proposition apparaîtra ici. Aucune modification ne sera enregistrée avant votre confirmation.':'Votre proposition apparaîtra ici. Aucune publication ne sera créée avant votre confirmation.'}</p>}

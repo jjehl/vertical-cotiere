@@ -7,17 +7,20 @@ initial : les publications uniquement, sauf option `--type` explicite.
 
 | Type (`--type`) | Contenus transférés |
 | --- | --- |
-| `all` | Tous les types ci-dessous ; valeur par défaut de `sync-site.sh` |
+| `all` | Tous les types éditoriaux ci-dessous, **sans les membres** ; valeur par défaut de `sync-site.sh` |
 | `documents` | Documents du club, PDF, catégories et descriptions |
 | `activities` | Activités et présentation des cours, textes et images de couverture |
 | `pages` | Pages et ressources, HTML, pièces jointes et relations avec les documents du club |
 | `timetable` | Saison, planning des cours, capacités, places historiques occupées, quatre tarifs par cours, activation/date d’ouverture des inscriptions, calendrier UFRAPS, périodes et jours de fermeture |
 | `publications` | Publications, brouillons, rendez-vous d’agenda, photos et pièces jointes |
+| `members` | Comptes et profils membres, uniquement avec `--type members` |
 
 La page d’inscription utilise les tarifs et disponibilités du planning : ils sont
 donc transférés par `timetable`. Les dossiers d’adhésion, paiements HelloAsso,
-comptes membres, participants aux sondages, secrets et paramètres techniques ne
-sont jamais exportés. Les réservations et paiements de la cible restent en place ;
+participants aux sondages, secrets applicatifs et paramètres techniques ne
+sont jamais exportés. Les membres sont exclus des transferts éditoriaux et de
+`--type all` ; leur procédure dédiée est décrite ci-dessous.
+Les réservations et paiements de la cible restent en place ;
 les disponibilités sont recalculées à partir de ces dossiers.
 
 Les gabarits et textes écrits directement dans les fichiers Vue (par exemple
@@ -96,7 +99,7 @@ Aucun transfert de contenu ne se produit automatiquement lors d’un déploiemen
 ```
 
 Les mêmes jetons et le même fichier `.env.content-sync` servent aux deux commandes ;
-aucune permission supplémentaire n’est nécessaire. Le transfert global traite
+aucune permission supplémentaire n’est nécessaire pour les types éditoriaux. Le transfert global traite
 d’abord les documents du club, puis les activités, pages, planning et publications.
 Une page isolée emporte aussi ses documents liés, chacun traité une seule fois par
 exécution. Si l’un de ces documents est en conflit ou en erreur, la page n’est pas
@@ -156,6 +159,57 @@ Les fichiers temporaires sont supprimés à la fin de la commande. Chaque fichie
 est lu une seule fois par exécution, même s’il figure dans plusieurs publications.
 La limite de cette commande est **50 Mo par original**. Si un proxy ajoute une
 limite plus basse, l’ajuster ou réduire le fichier avant transfert.
+
+## Transfert facultatif des membres
+
+Les membres ne sont **jamais** inclus par défaut, même avec `--type all`.
+Déployer cette version du CMS sur les deux environnements avant utilisation.
+Dans les jetons API personnalisés déjà configurés, ajouter uniquement si nécessaire :
+
+- sur la source : `content-sync → membersExport` ;
+- sur la cible : `content-sync → membersPlan` et `membersImport`.
+
+Les permissions éditoriales `export`, `plan` et `import` n'autorisent pas l'accès
+aux membres. Les JWT des membres et sessions d'administration ne sont pas acceptés.
+Les noms ci-dessus correspondent aux actions des routes ; l'administration peut
+les afficher avec des espaces.
+
+```bash
+./sync-site.sh --from local --to re7 --type members --dry-run
+./sync-site.sh --from local --to re7 --type members
+```
+
+Le transfert comprend les identifiants de connexion, e-mails, coordonnées, licence
+FFME, date de naissance d'adhésion, état confirmé/bloqué et rôle membre
+(`authenticated`, `contributor`, `member_admin`). Les rôles doivent déjà exister
+sur la cible ; leurs permissions ne sont jamais copiées. Plusieurs membres d'une
+même famille peuvent partager une adresse e-mail : elle ne sert jamais à fusionner
+automatiquement des comptes.
+
+Le mot de passe est transféré sous forme de **hash bcrypt**, jamais en clair, et
+reste utilisable sur la cible. Le jeton source autorisé à exporter les membres
+doit donc rester réservé à l'administrateur. Les rapports ne contiennent ni profil
+ni hash ; l'historique de fusion ne conserve qu'une empreinte du hash. Un mot de
+passe modifié uniquement sur la cible est conservé ; des modifications des deux
+côtés produisent un conflit.
+
+Les administrateurs Strapi, sessions/JWT, jetons de confirmation, récupération et
+invitation, liens Google, inscriptions, paiements, contributions et relations avec
+les publications ne sont pas copiés. Les liens Google existants de la cible restent
+en place. Un compte source uniquement Google doit utiliser la récupération de mot
+de passe ou associer Google depuis la cible pour s'y connecter.
+
+Le premier transfert crée un nouveau compte avec ses propres identifiants
+techniques. Un identifiant de connexion déjà présent (sans distinction de casse)
+est signalé en conflit ; aucun compte existant n'est adopté automatiquement.
+`--slug` et `--adopt-slug` ne sont pas disponibles pour les membres.
+Après un premier transfert réussi, les profils suivent une fusion champ par champ
+avec détection des changements concurrents. Les comptes supplémentaires ou
+supprimés sur la cible ne sont ni effacés ni recréés automatiquement.
+
+RE7 protège le site et ses API éditoriales par mot de passe HTTP. Les routes exactes
+de synchronisation restent accessibles avec leurs jetons API dédiés : aucun mot
+de passe HTTP supplémentaire n'est requis dans `.env.content-sync`.
 
 ## Pages, documents et planning déjà présents sur la cible
 
@@ -290,17 +344,21 @@ L’export accepte aussi `type=documents|activities|pages|timetable` et renvoie
 Les contenus v2 contiennent leurs versions brouillon/publiée, les fichiers et
 les dépendances documentaires. Les relations utilisent les documentId source,
 remappés au moyen des correspondances de la cible ; aucun identifiant de composant
-n’est accepté. Les champs autorisés sont limités aux types éditoriaux ci-dessus.
+n’est accepté. Les champs autorisés sur ces routes sont limités aux types éditoriaux ci-dessus.
+Les membres utilisent exclusivement `GET /api/content-sync/members/export`,
+`POST /api/content-sync/members/plan` et `POST /api/content-sync/members/import`,
+avec leurs permissions dédiées `membersExport`, `membersPlan`, `membersImport`.
 
 `plan` et `import` reçoivent `{publication, adoptSlug}` pour le format v1 ou
 `{content, adoptSlug}` pour le format v2. Le jeton d’export donne
 accès aux champs éditoriaux historiques privés et aux originaux de la médiathèque :
 le réserver à l’administrateur. Les permissions ne sont attribuées à aucun rôle
-membre. Les routes ne permettent ni d’importer des utilisateurs ni de fournir un
+membre. Les routes éditoriales ne permettent ni d’importer des utilisateurs ni de fournir un
 chemin serveur, une URL de téléchargement arbitraire ou des credentials S3.
 
 ```bash
-node --test cms/tests/content-sync.test.js cms/tests/content-sync-site.test.js scripts/tests/sync-publications.test.mjs
+docker compose exec -T cms node --test tests/content-sync.test.js tests/content-sync-site.test.js tests/content-sync-members.test.js
+node --test scripts/tests/sync-publications.test.mjs
 docker compose cp scripts/sync-publications.mjs cms:/tmp/vertical-sync-client.mjs
 docker compose exec -T -e RUN_CONTENT_SYNC_TESTS=true cms node tests/content-sync.integration.js
 ```

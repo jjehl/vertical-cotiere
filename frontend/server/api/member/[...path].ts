@@ -91,7 +91,7 @@ export default defineEventHandler(async (event):Promise<unknown>=>{
     const publication=path.match(/^assistant\/publications\/([a-zA-Z0-9_-]{1,100})$/);
     if(publication&&method==='GET')target='/api/member/assistant/publications/'+publication[1];
     const publicationPhotos=path.match(/^publications\/([a-zA-Z0-9_-]{1,200})\/photos$/);
-    if(publicationPhotos&&['GET','POST'].includes(method))target='/api/member/publications/'+publicationPhotos[1]+'/photos';
+    if(publicationPhotos&&['GET','POST','PUT'].includes(method))target='/api/member/publications/'+publicationPhotos[1]+'/photos';
     const deletePhoto=path.match(/^publications\/([a-zA-Z0-9_-]{1,200})\/photos\/(\d+)$/);
     if(deletePhoto&&method==='DELETE')target='/api/member/publications/'+deletePhoto[1]+'/photos/'+deletePhoto[2];
     const poll=path.match(/^publications\/([a-zA-Z0-9_-]{1,200})\/poll(\/register|\/members)?$/);
@@ -102,7 +102,7 @@ export default defineEventHandler(async (event):Promise<unknown>=>{
       return proxyRequest(event,cms+target,{headers:{authorization:'Bearer '+token,cookie:''},fetchOptions:{redirect:'error'}});
     }
     const directoryQuery=path==='directory'?Object.fromEntries(['q','sort','direction','role','status','page','pageSize'].filter(key=>getQuery(event)[key]!==undefined).map(key=>[key,getQuery(event)[key]])):undefined;
-    const response:unknown=await $fetch<unknown>(cms+target,{method:method as 'GET'|'POST'|'PUT'|'DELETE',headers:{authorization:'Bearer '+token},...(directoryQuery?{query:directoryQuery}:poll?.[2]==='/members'?{query:{q:getQuery(event).q}}:{}),...(['POST','PUT'].includes(method)?{body:await readBody(event)}:{}),timeout:path==='assistant/prepare'?55000:15000});
+    const response:unknown=await $fetch<unknown>(cms+target,{method:method as 'GET'|'POST'|'PUT'|'DELETE',headers:{authorization:'Bearer '+token},...(directoryQuery?{query:directoryQuery}:poll?.[2]==='/members'?{query:{q:getQuery(event).q}}:{}),...(['POST','PUT'].includes(method)?{body:await readBody(event)}:{}),timeout:path==='assistant/prepare'?135000:15000});
     if(path==='password') {
       const result=response as {jwt?:string};if(result.jwt)saveSession(result.jwt);
       return {ok:true};

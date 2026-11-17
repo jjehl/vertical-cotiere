@@ -116,6 +116,16 @@ présentes après une nouvelle publication du texte. Leur accès public est reti
 si la publication est dépubliée. Un administrateur peut les supprimer depuis
 la médiathèque Strapi.
 
+L’auteur contributeur d’une publication et les administrateurs membres peuvent
+cliquer sur **Réorganiser les photos**. Glisser les photos, ou utiliser les boutons
+pour les avancer, les reculer ou les placer en premier, puis **Enregistrer l’ordre**.
+**Annuler** conserve l’ordre précédent. L’ordre concerne les photos éditoriales
+et communautaires et reste conservé après une nouvelle publication du texte.
+La première photo sert de couverture si aucune couverture spécifique n’a été
+choisie dans Strapi. Réordonner ne publie pas les changements en brouillon.
+Si les photos ont changé dans un autre onglet, recharger la publication avant de
+réessayer pour éviter d’écraser ces changements.
+
 ## Sondages de participation aux événements
 
 Dans l’encart **Le rendez-vous** d’une publication en ligne, un contributeur

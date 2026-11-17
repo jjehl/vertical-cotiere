@@ -116,8 +116,13 @@ Elle est lancée manuellement depuis le poste administrateur avec `--from` et
 Les migrations internes Strapi peuvent s'exécuter au démarrage. Un dump PostgreSQL
 local est réalisé après démarrage/contrôle de PostgreSQL et avant le nouveau CMS. Il ne remplace
 pas une sauvegarde externe OVH ni une sauvegarde des uploads. Surveiller le disque.
-La recette est publique par défaut avec un en-tête noindex ; ce n'est pas une
-protection contre la consultation.
+La recette est protégée par authentification HTTP au niveau de Traefik, y compris
+les API éditoriales publiques du CMS. Le fichier htpasswd root-only
+`/opt/infra-ovh/secrets/vertical-re7-users` doit exister avant le déploiement.
+Les routes exactes de synchronisation utilisent leurs jetons API Strapi, et
+l’administration CMS conserve son authentification Strapi. Les médias du bucket
+S3 restent publics lorsqu’on connaît leur URL ; le mot de passe du site ne modifie
+pas les ACL du stockage.
 
 Pas de rollback automatique : une migration de schéma peut rendre l'ancienne
 image incompatible. Pour rejouer une livraison, relancer le seul job de déploiement

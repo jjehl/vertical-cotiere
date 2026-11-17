@@ -1,0 +1,46 @@
+const assert=require('node:assert/strict');
+module.exports=async({app,request,publication,token,otherToken,user,basic,contributor,directoryAdmin})=>{
+  const path='/api/member/publications/'+publication.slug+'/photos';
+  const read=async()=>(await request('/api/publications/'+publication.slug)).body;
+  const beforePhotos=(await read()).photos;
+  const original=beforePhotos.map(photo=>photo.id);const reversed=[...original].reverse();
+  const body={ids:reversed,previousIds:original};
+  const docs=app.documents('api::publication.publication');
+  const draftBefore=await docs.findOne({documentId:publication.documentId,populate:{photos:true,meeting:true}});
+  const publishedBefore=await docs.findOne({documentId:publication.documentId,status:'published',populate:{photos:true,meeting:true}});
+  assert([401,403].includes((await request(path,body,null,'PUT')).status));
+  assert.equal((await request(path,body,otherToken,'PUT')).status,403);
+  assert.equal((await request(path,null,otherToken)).body.canReorder,false);
+  assert.equal((await request(path,null,token)).body.canReorder,true);
+  const users=app.plugin('users-permissions').service('user');
+  await users.edit(user.id,{role:basic.id});
+  assert.equal((await request(path,body,token,'PUT')).status,403);
+  await users.edit(user.id,{role:contributor.id,blocked:true});
+  assert([401,403].includes((await request(path,body,token,'PUT')).status));
+  await users.edit(user.id,{blocked:false});
+  for(const ids of [[original[0],original[0],original[2]],original.slice(1),[...original,999999],['1'],null])assert.equal((await request(path,{...body,ids},token,'PUT')).status,400);
+  assert.equal((await request(path,{...body,previousIds:original.slice(1)},token,'PUT')).status,409);
+  const saved=await request(path,body,token,'PUT');assert.equal(saved.status,200,JSON.stringify(saved.body));
+  const publicAfter=await read();assert.deepEqual(publicAfter.photos.map(photo=>photo.id),reversed);
+  assert.equal(publicAfter.image,publicAfter.photos[0].src);assert(!('photoOrder' in publicAfter));
+  for(const photo of beforePhotos)assert.equal(publicAfter.photos.find(current=>current.id===photo.id).addedBy,photo.addedBy);
+  for(const [status,before] of [['draft',draftBefore],['published',publishedBefore]]){
+    const after=await docs.findOne({documentId:publication.documentId,status,populate:{photos:true,meeting:true}});
+    assert.equal(after.body,before.body);assert.deepEqual(after.meeting,before.meeting);assert.deepEqual(after.photos,before.photos);assert.deepEqual(after.photoOrder,reversed);
+  }
+  assert.equal((await request(path,{ids:original,previousIds:original},token,'PUT')).status,409,'Un autre onglet ne doit pas écraser le nouvel ordre.');
+  const login=await request('/api/auth/local',{identifier:directoryAdmin.email,password:directoryAdmin.password});
+  assert.equal(login.status,200,JSON.stringify(login.body));const adminToken=login.body.jwt;
+  assert.equal((await request(path,null,adminToken)).body.canReorder,true);
+  assert.equal((await request(path,{ids:original,previousIds:reversed},adminToken,'PUT')).status,200);
+  const fixture=await docs.create({data:{title:'Test ordre et brouillon',body:'Texte public',category:'Vie du club',photos:original.slice(0,2)},status:'published'});
+  const fixturePath='/api/member/publications/'+fixture.slug+'/photos';
+  await docs.update({documentId:fixture.documentId,data:{body:'Texte privé en brouillon'}});
+  const fixtureOrder=original.slice(0,2).reverse();
+  const fixtureSaved=await request(fixturePath,{ids:fixtureOrder,previousIds:original.slice(0,2)},adminToken,'PUT');assert.equal(fixtureSaved.status,200,JSON.stringify(fixtureSaved.body));
+  assert.equal((await request('/api/publications/'+fixture.slug)).body.body,'Texte public');
+  await docs.publish({documentId:fixture.documentId});
+  assert.deepEqual((await request('/api/publications/'+fixture.slug)).body.photos.map(photo=>photo.id),fixtureOrder);
+  await docs.delete({documentId:fixture.documentId});
+  console.log('OK : ordre des photos éditoriales et communautaires, couverture, brouillon préservé, republication, droits auteur/admin et conflit entre onglets.');
+};

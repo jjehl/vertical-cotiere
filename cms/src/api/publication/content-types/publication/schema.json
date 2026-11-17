@@ -35,6 +35,13 @@
         "files"
       ]
     },
+    "photoOrder": {
+      "type": "json",
+      "private": true,
+      "pluginOptions": {
+        "content-manager": { "visible": false }
+      }
+    },
     "meeting": {
       "type": "component",
       "repeatable": false,

@@ -117,6 +117,7 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
     assert(!JSON.stringify(publicPhotos).includes('member-b@local.invalid'));assert(!JSON.stringify(publicPhotos).includes('000123456'));
     assert.equal((await request('/api/site-files/'+additions[0].body[0].id)).status,200);
     assert.equal((await request('/api/site-content')).body.publications.find(row=>row.slug===publication.slug).photoCount,3);
+    await require('./publication-photo-order.integration.cjs')({app,request,publication,token,otherToken,user,basic,contributor,directoryAdmin});
     await docs.update({documentId,data:{body:publication.body}});
     // A publication without a member author or an initial gallery accepts community photos too.
     const historical=await docs.create({data:{title:'Publication du club',body:'Une publication créée dans Strapi.',category:'Vie du club'},status:'published'});

@@ -76,11 +76,12 @@ module.exports={
   },
   async publicationPhotoIds(ctx){
     const user=member(ctx);
-    const publication=await strapi.documents(uid).findFirst({status:'published',filters:{slug:ctx.params.slug},fields:['documentId']});
+    const publication=await strapi.documents(uid).findFirst({status:'published',filters:{slug:ctx.params.slug},fields:['documentId'],populate:{memberAuthor:{fields:['id']}}});
     if(!publication)return ctx.notFound('Publication introuvable.');
     const uploads=await strapi.db.query('api::member-upload.member-upload').findMany({where:{owner:user.id,publicationDocumentId:publication.documentId},populate:{file:{select:['id']}}});
-    ctx.body={ids:uploads.filter(upload=>upload.file).map(upload=>upload.file.id)};
+    ctx.body={ids:uploads.filter(upload=>upload.file).map(upload=>upload.file.id),canReorder:require('../../../lib/publication-photos').canReorderPhotos(user,publication)};
   },
+  async reorderPublicationPhotos(ctx){return require('../../../lib/publication-photos').reorderPhotos(strapi,ctx,member(ctx,true));},
   async deletePublicationPhoto(ctx){
     const user=member(ctx);const id=Number(ctx.params.id);
     if(!Number.isSafeInteger(id)||id<1)return ctx.notFound('Photo introuvable.');

@@ -93,7 +93,7 @@ module.exports = {
         let response;
         try {
           response = await fetch('https://api.mistral.ai/v1/chat/completions', {
-            method:'POST', headers:{Authorization:`Bearer ${process.env.MISTRAL_API_KEY}`, 'Content-Type':'application/json'}, signal:AbortSignal.timeout(45000),
+            method:'POST', headers:{Authorization:`Bearer ${process.env.MISTRAL_API_KEY}`, 'Content-Type':'application/json'}, signal:AbortSignal.timeout(120000),
             body: JSON.stringify({ model, temperature:0, top_p:1, max_tokens:8192,
               ...(/^mistral-large-4(?:-0)?$/.test(model) ? { reasoning_effort:'low' } : {}),
               response_format:{type:'json_schema',json_schema:{name:'publication_proposal',schema:responseSchema,strict:true}},

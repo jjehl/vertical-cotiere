@@ -48,7 +48,8 @@ export function options(argv,env=process.env){
     const resolved=endpoint(result[key],env);result[key]=resolved.url;result[key+'Profile']=resolved.profile;
   }
   if(result.source===result.target&&!result.help)throw Error('La source et la destination doivent être distinctes.');
-  if(![...contentTypes,'all'].includes(result.type))throw Error('Type inconnu : utiliser all, publications, pages, activities, documents ou timetable.');
+  if(![...contentTypes,'all','members'].includes(result.type))throw Error('Type inconnu : utiliser all, publications, pages, activities, documents, timetable ou members.');
+  if(result.type==='members'&&(result.slug||result.adoptSlug))throw Error('Les membres ne permettent ni --slug ni --adopt-slug.');
   if(result.type==='all'&&result.slug)throw Error('--slug nécessite de choisir un seul --type.');
   if(result.adoptSlug&&!result.slug)throw Error('--adopt-slug nécessite --slug pour rapprocher un seul contenu.');
   if(result.type==='timetable'&&result.slug&&result.slug!=='club-timetable')throw Error('Le slug du planning est club-timetable.');
@@ -99,7 +100,8 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
     const label=type+'/'+(content.draft?.slug||(type==='timetable'?'club-timetable':content.documentId));
     let success=false;
     try{
-      if(content.version===2&&(!contentTypes.includes(type)||!Array.isArray(content.dependencies)))throw Error('Format de contenu incompatible.');
+      if(content.version===2&&(![...contentTypes,'members'].includes(type)||!Array.isArray(content.dependencies)))throw Error('Format de contenu incompatible.');
+      if(type==='members'&&(config.type!=='members'||content.files?.length||content.dependencies.length))throw Error('Transfert de membres non demandé ou format incompatible.');
       for(const child of content.dependencies||[]){
         if(child.type!=='documents'||child.sourceId!==content.sourceId||child.dependencies?.length)throw Error('Dépendance incompatible.');
         if(!await transfer(child,{dependency:true}))throw Error('Document lié en conflit ou en erreur : '+child.draft?.slug);
@@ -119,7 +121,8 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
       // Nested descriptors use the same cache even when the document was processed earlier.
       for(const child of content.dependencies||[])for(const file of child.files){const cached=cache.get(child.sourceId+':'+file.id);if(cached)file.sha256=cached.sha256;}
       const payload={...(content.version===2?{content}:{publication:content}),adoptSlug:!dependency&&config.adoptSlug};
-      let result=await jsonRequest('target','/api/content-sync/plan',payload);
+      const route='/api/content-sync/'+(type==='members'?'members/':'');
+      let result=await jsonRequest('target',route+'plan',payload);
       if(!config.dryRun&&result.action!=='conflict'){
         for(const file of result.missingFiles){
           const cached=cache.get(content.sourceId+':'+file.id);
@@ -127,7 +130,7 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
           form.append('files',new Blob([await readFile(cached.filepath)],{type:file.mime}),file.name);
           await(await request('target','/api/content-sync/files',{method:'POST',form})).json();
         }
-        result=await jsonRequest('target','/api/content-sync/import',payload);
+        result=await jsonRequest('target',route+'import',payload);
       }
       if(!['create','update','unchanged','conflict'].includes(result.action))throw Error('Réponse d’import incompatible.');
       summary[result.action]++;success=result.action!=='conflict';
@@ -140,8 +143,8 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
     for(const type of config.type==='all'?contentTypes:[config.type||'publications']){
       let page=1,pageCount=1;
       do{
-        const query=new URLSearchParams({page:String(page),pageSize:'10',...(type==='publications'?{}:{type}),...(config.slug?{slug:config.slug}:{})});
-        const batch=await jsonRequest('source','/api/content-sync/export?'+query);
+        const query=new URLSearchParams({page:String(page),pageSize:'10',...(['publications','members'].includes(type)?{}:{type}),...(config.slug?{slug:config.slug}:{})});
+        const batch=await jsonRequest('source','/api/content-sync/'+(type==='members'?'members/':'')+'export?'+query);
         const contents=type==='publications'?batch.publications:batch.contents;
         if(batch.version!==(type==='publications'?1:2)||type!=='publications'&&batch.type!==type||!Array.isArray(contents)||!batch.pagination||!Number.isSafeInteger(batch.pagination.pageCount)||batch.pagination.pageCount<0)throw Error('Format d’export incompatible pour '+type+' ; mettre les deux CMS à jour.');
         pageCount=batch.pagination.pageCount;
@@ -157,7 +160,7 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
   try{
     const config=options(process.argv.slice(2));
-    if(config.help)console.log('Usage : ./sync-site.sh --from SOURCE --to CIBLE [--dry-run] [--type TYPE] [--slug SLUG [--adopt-slug]]\nTypes : all, documents, activities, pages, timetable, publications. Planning : --type timetable --slug club-timetable.\nSource et cible : local, re7, prod, un profil SYNC_<NOM>_URL ou une URL complète.\n./sync-site.sh transfère tous les contenus ; ./sync-publications.sh reste limité aux publications par défaut.\nPar défaut : local → re7. Jetons : SYNC_<ENV>_EXPORT_TOKEN et SYNC_<ENV>_IMPORT_TOKEN.\nURLs libres : SYNC_SOURCE_URL/TOKEN et SYNC_TARGET_URL/TOKEN.');
+    if(config.help)console.log('Usage : ./sync-site.sh --from SOURCE --to CIBLE [--dry-run] [--type TYPE] [--slug SLUG [--adopt-slug]]\nTypes : all, documents, activities, pages, timetable, publications, members. Members est exclusivement explicite et exclu de all. Planning : --type timetable --slug club-timetable.\nSource et cible : local, re7, prod, un profil SYNC_<NOM>_URL ou une URL complète.\n./sync-site.sh transfère tous les contenus ; ./sync-publications.sh reste limité aux publications par défaut.\nPar défaut : local → re7. Jetons : SYNC_<ENV>_EXPORT_TOKEN et SYNC_<ENV>_IMPORT_TOKEN.\nURLs libres : SYNC_SOURCE_URL/TOKEN et SYNC_TARGET_URL/TOKEN.');
     else {const result=await run(config);if(result.conflict||result.failed)process.exitCode=2;}
   }catch(error){console.error(error.message);process.exitCode=1;}
 }

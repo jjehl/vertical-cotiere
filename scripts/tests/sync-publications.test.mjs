@@ -8,6 +8,39 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
 
+test('Members reste explicite, utilise ses routes dédiées et ne journalise pas les données du profil',async()=>{
+  assert.equal(options(['--type','members'],{}).type,'members');
+  assert.throws(()=>options(['--type','members','--slug','member'],{}),/ni --slug/);
+  assert.throws(()=>options(['--type','members','--adopt-slug'],{}),/ni --slug/);
+  let imports=0;const exports=[],logs=[];
+  const member={version:2,type:'members',sourceId:'source',documentId:'member-id',draft:{username:'private.member',email:'private@example.test',passwordHash:'private-hash'},published:null,files:[],dependencies:[]};
+  const server=createServer(async(req,res)=>{
+    try{
+      const url=new URL(req.url,'http://localhost');
+      const send=body=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));};
+      if(url.pathname.endsWith('/export')){
+        const type=url.pathname.includes('/members/')?'members':url.searchParams.get('type')||'publications';exports.push(type);
+        assert.equal(req.headers.authorization,'Bearer read');
+        return send(type==='publications'?{version:1,publications:[],pagination:{pageCount:0}}:{version:2,type,contents:type==='members'?[member]:[],pagination:{pageCount:type==='members'?1:0}});
+      }
+      assert.equal(req.headers.authorization,'Bearer write');
+      let raw='';for await(const chunk of req)raw+=chunk;assert.deepEqual(JSON.parse(raw).content,member);
+      if(url.pathname==='/target/api/content-sync/members/plan')return send({action:imports?'unchanged':'create',missingFiles:[]});
+      assert.equal(url.pathname,'/target/api/content-sync/members/import');const action=imports?'unchanged':'create';imports++;send({action});
+    }catch(error){res.writeHead(500);res.end(error.message);}
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const address='http://127.0.0.1:'+server.address().port,config={source:address+'/source',target:address+'/target',type:'members',dryRun:true};
+  const credentials={sourceToken:'read',targetToken:'write',log:value=>logs.push(value)};
+  try{
+    assert.equal((await run(config,credentials)).create,1);assert.equal(imports,0);
+    config.dryRun=false;assert.equal((await run(config,credentials)).create,1);assert.equal((await run(config,credentials)).unchanged,1);
+    assert(!logs.join('\n').includes('private'));
+    exports.length=0;config.type='all';assert.equal((await run(config,credentials)).failed,0);
+    assert.deepEqual(exports,['documents','activities','pages','timetable','publications']);assert.equal(imports,2);
+  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});
+
 test('Sélection des contenus du site et rapprochement limité à un type et un slug',()=>{
   assert.equal(options(['--type','all'],{}).type,'all');
   assert.equal(options(['--type','timetable','--slug','club-timetable','--adopt-slug'],{}).type,'timetable');

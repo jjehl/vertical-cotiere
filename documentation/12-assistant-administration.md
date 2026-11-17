@@ -14,7 +14,8 @@ qui apparaîtra aussi dans l’agenda.
 1. Décrire le contenu, les dates et le lieu si nécessaire.
 2. Joindre éventuellement des photos (30 maximum, 20 Mo par photo dans l’interface).
 3. Cliquer sur **Préparer la proposition**. Une demande ambiguë peut entraîner une
-   question : compléter le texte et relancer.
+   question : compléter le texte et relancer. Pendant la préparation, un indicateur
+   de chargement et un compteur de secondes affichent l’attente (jusqu’à deux minutes).
 4. Vérifier le texte, les dates françaises et les photos. Choisir **Enregistrer le
    brouillon** ou **Confirmer et publier** si votre rôle permet la publication.
 
@@ -63,7 +64,7 @@ Source : [fiche officielle du modèle](https://docs.mistral.ai/models/mistral-la
 
 `MISTRAL_MODEL` permet de changer le modèle sans reconstruire les images ; utiliser
 un modèle compatible avec les sorties JSON Schema. Aucun basculement automatique
-vers un modèle plus cher. L’API est limitée à 8 192 jetons en sortie (raisonnement inclus), 45 secondes
+vers un modèle plus cher. L’API est limitée à 8 192 jetons en sortie (raisonnement inclus), 120 secondes
 de délai réseau et 30 préparations par heure par administrateur, deux au maximum
 simultanément pour cette instance CMS. Pour Large 4, l’effort de raisonnement est
 fixé à `low` pour réserver davantage de budget au JSON final. Les demandes ne sont pas relancées

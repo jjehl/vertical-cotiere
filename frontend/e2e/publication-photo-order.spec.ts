@@ -53,6 +53,22 @@ test('déplacer, annuler, enregistrer et retrouver l’ordre des photos',async({
   expect(errors).toEqual([]);
 });
 
+test('glisser directement une photo sur une autre, puis enregistrer son ordre',async({page})=>{
+  const ui=await gallery(page);
+  await page.getByRole('button',{name:'Réorganiser les photos',exact:true}).click();
+  await page.getByRole('img',{name:'Photo 1',exact:true}).dragTo(page.getByRole('img',{name:'Photo 3',exact:true}),{timeout:3000});
+  expect(await ui.order()).toEqual(['Photo 2','Photo 3','Photo 1']);
+  await page.getByRole('img',{name:'Photo 1',exact:true}).dragTo(page.getByRole('img',{name:'Photo 2',exact:true}),{timeout:3000});
+  expect(await ui.order()).toEqual(['Photo 1','Photo 2','Photo 3']);
+  await page.getByRole('img',{name:'Photo 3',exact:true}).dragTo(page.getByRole('img',{name:'Photo 1',exact:true}),{timeout:3000});
+  expect(await ui.order()).toEqual(['Photo 3','Photo 1','Photo 2']);
+  await expect(page.getByRole('dialog')).not.toBeVisible();
+  await page.getByRole('button',{name:'Enregistrer l’ordre',exact:true}).click();
+  await expect(page.getByText('L’ordre des photos a été enregistré.',{exact:true})).toBeVisible();
+  expect(ui.requests).toEqual([[3,1,2]]);
+  await ui.open();expect(await ui.order()).toEqual(['Photo 3','Photo 1','Photo 2']);
+});
+
 test('boutons sur mobile et déplacements entre les pages de la galerie',async({page})=>{
   await page.setViewportSize({width:390,height:844});
   const ui=await gallery(page,50);

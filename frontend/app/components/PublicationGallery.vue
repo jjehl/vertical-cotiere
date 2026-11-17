@@ -16,6 +16,7 @@ const visible=computed(()=>orderedPhotos.value.slice((page.value-1)*48,page.valu
 const orderChanged=computed(()=>draftOrder.value?.some((photo,index)=>photo.id!==props.photos[index]?.id));
 function editOrder(){selected.value=null;draftOrder.value=[...props.photos];emit('reordering',true);}
 function cancelOrder(){draftOrder.value=null;dragging.value=null;dropTarget.value=null;emit('reordering',false);}
+function openPhoto(index:number){if(!draftOrder.value)selected.value=(page.value-1)*48+index;}
 function movePhoto(id:number,to:number){
   if(!draftOrder.value||props.savingOrder)return;
   const from=draftOrder.value.findIndex(photo=>photo.id===id);
@@ -63,12 +64,12 @@ onMounted(()=>{
     <p v-if="photos.length">{{photos.length}} photo{{photos.length>1?'s':''}}</p>
     <p v-else class="fine-print">Partagez les premières photos de cette publication.</p>
     <div class="photo-grid" :class="{'single-photo':photos.length===1}">
-      <figure v-for="(photo,index) in visible" :key="photo.id" :class="{'photo-order-item':draftOrder,'photo-order-dragging':dragging===photo.id,'photo-order-target':dropTarget===photo.id&&dragging!==photo.id}" @dragover="dragOver($event,photo.id)" @drop="dropPhoto($event,photo.id)">
-        <button :disabled="!interactive||!!draftOrder" :aria-label="`Ouvrir la photo ${index+1+(page-1)*48} : ${photo.title}`" @click="selected=(page-1)*48+index">
+      <figure v-for="(photo,index) in visible" :key="photo.id" :draggable="!!draftOrder&&!savingOrder" :class="{'photo-order-item':draftOrder,'photo-order-dragging':dragging===photo.id,'photo-order-target':dropTarget===photo.id&&dragging!==photo.id}" @dragstart="dragStart($event,photo.id)" @dragend="dragging=null;dropTarget=null" @dragover="dragOver($event,photo.id)" @drop="dropPhoto($event,photo.id)">
+        <button :disabled="!interactive||savingOrder" :aria-label="`${draftOrder?'Déplacer':'Ouvrir'} la photo ${index+1+(page-1)*48} : ${photo.title}`" @click="openPhoto(index)">
           <img :src="photo.thumb" :alt="photo.title" :draggable="false" loading="lazy" width="600" height="450">
         </button>
         <div v-if="draftOrder" class="photo-order-controls" role="group" :aria-label="`Position de la photo : ${photo.title}`">
-          <button type="button" class="photo-order-handle" :draggable="!savingOrder" :disabled="savingOrder" :aria-label="`Glisser la photo : ${photo.title}`" @dragstart="dragStart($event,photo.id)" @dragend="dragging=null;dropTarget=null">⠿ <span>{{index+1+(page-1)*48}}</span></button>
+          <button type="button" class="photo-order-handle" :draggable="!savingOrder" :disabled="savingOrder" :aria-label="`Glisser la photo : ${photo.title}`">⠿ <span>{{index+1+(page-1)*48}}</span></button>
           <button type="button" :disabled="savingOrder||index+(page-1)*48===0" :aria-label="`Avancer la photo : ${photo.title}`" @click="movePhoto(photo.id,index+(page-1)*48-1)">←</button>
           <button type="button" :disabled="savingOrder||index+(page-1)*48===photos.length-1" :aria-label="`Reculer la photo : ${photo.title}`" @click="movePhoto(photo.id,index+(page-1)*48+1)">→</button>
           <button type="button" :disabled="savingOrder||index+(page-1)*48===0" :aria-label="`Mettre en premier : ${photo.title}`" @click="movePhoto(photo.id,0)">En premier</button>

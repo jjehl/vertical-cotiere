@@ -2023,6 +2023,8 @@ em {
 .photo-order-toolbar>.member-error {margin:12px 0 0}
 .photo-order-actions {display:flex;gap:12px;flex-wrap:wrap}
 .photo-order-item {padding:6px;border:2px solid var(--line);border-radius:8px}
+.photo-order-item>button:not(:disabled) {cursor:grab}
+.photo-order-item>button:not(:disabled):active {cursor:grabbing}
 .photo-order-dragging {opacity:.45}
 .photo-order-target {border-color:var(--orange);background:#eaf0e5}
 .photo-order-controls {display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}

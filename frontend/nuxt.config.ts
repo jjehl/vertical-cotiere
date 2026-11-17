@@ -1,6 +1,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-07',
   devtools: { enabled: false },
+  nitro: { compressPublicAssets: true },
   css: ['~/assets/css/main.css'],
   app: {
     head: {

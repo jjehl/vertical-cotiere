@@ -77,7 +77,7 @@ jobs:
       - name: Synchronisation des contenus du site (base temporaire et fichiers S3)
         run: |
           docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml cp scripts/sync-publications.mjs cms:/tmp/vertical-sync-client.mjs
-          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T cms node --test tests/content-sync.test.js tests/content-sync-site.test.js tests/content-sync-members.test.js
+          docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T cms node --test tests/content-sync.test.js tests/content-sync-site.test.js tests/content-sync-members.test.js tests/content-sync-image.test.js
           docker compose -p vertical-ci -f compose.yaml -f deploy/compose.test.yaml -f deploy/compose.assistant-test.yaml exec -T -e RUN_CONTENT_SYNC_TESTS=true cms node tests/content-sync.integration.js
       - name: Installer le navigateur de recette
         run: npx playwright install --with-deps chromium

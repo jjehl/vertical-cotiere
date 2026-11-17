@@ -224,11 +224,23 @@ test('documents du club et nouvelle photo des cours administrés par Strapi',asy
   expect(course.imagePosition).toBe('100% 45%');
   await page.goto('/');
   const photo=page.locator('.activity-card[href="/horaires-et-acces"] img');
-  await expect(photo).toHaveAttribute('src',course.image);
+  await expect(photo).toHaveAttribute('src',course.image+'?variant=thumbnail');
   await expect(photo).toHaveCSS('object-position','100% 45%');
   expect(await photo.evaluate((img:HTMLImageElement)=>img.complete&&img.naturalWidth>0)).toBeTruthy();
 });
 
+
+test('miniatures des cartes et revalidation des médias sans retransfert',async({page,request})=>{
+  await page.goto('/');
+  const cards=page.locator('.activity-card img, .publication-card img');
+  expect(await cards.count()).toBeGreaterThan(0);
+  for(const card of await cards.all())await expect(card).toHaveAttribute('src',/^\/media\/\d+\?variant=thumbnail$/);
+  const url=(await cards.first().getAttribute('src'))!;
+  const first=await request.get(url);expect(first.status()).toBe(200);
+  const etag=first.headers().etag;expect(etag).toBeTruthy();
+  const cached=await request.get(url,{headers:{'If-None-Match':etag!}});
+  expect(cached.status()).toBe(304);expect((await cached.body()).length).toBe(0);
+});
 
 test('La vie du club affiche seulement les publications avec plusieurs photos',async({page,request})=>{
   const data=await(await request.get('/api/content')).json();

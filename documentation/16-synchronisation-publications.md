@@ -303,6 +303,17 @@ continue ni en miroir avec propagation des suppressions.
 ## Médias, liens et reprise
 
 Les originaux sont téléchargés par l’API source, puis téléversés par l’API cible.
+
+Si Strapi refuse un ancien JPEG à cause d’un segment de pixels endommagé mais
+encore décodable, la cible tente un réencodage JPEG en qualité 95, conserve les
+métadonnées et valide de nouveau le résultat avec le décodeur strict. L’original
+source reste inchangé ; la correspondance utilise son empreinte initiale pour
+éviter les doublons lors d’une relance. Cette récupération est signalée dans les
+journaux du CMS. Une image irrécupérable est refusée avec un HTTP 422 et son nom ;
+remplacer alors le fichier source avant de relancer le transfert. La commande
+indique également le nom et l’identifiant source du fichier pour les autres
+échecs de téléversement.
+
 Le provider de la cible écrit lui-même dans son stockage (SeaweedFS en local,
 S3 OVH en re7/prod) et Strapi régénère les variantes
 d’images. L’empreinte reçue est contrôlée avant upload. Les correspondances utilisent
@@ -357,7 +368,7 @@ membre. Les routes éditoriales ne permettent ni d’importer des utilisateurs n
 chemin serveur, une URL de téléchargement arbitraire ou des credentials S3.
 
 ```bash
-docker compose exec -T cms node --test tests/content-sync.test.js tests/content-sync-site.test.js tests/content-sync-members.test.js
+docker compose exec -T cms node --test tests/content-sync.test.js tests/content-sync-site.test.js tests/content-sync-members.test.js tests/content-sync-image.test.js
 node --test scripts/tests/sync-publications.test.mjs
 docker compose cp scripts/sync-publications.mjs cms:/tmp/vertical-sync-client.mjs
 docker compose exec -T -e RUN_CONTENT_SYNC_TESTS=true cms node tests/content-sync.integration.js

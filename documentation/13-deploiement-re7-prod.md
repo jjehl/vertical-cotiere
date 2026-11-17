@@ -130,6 +130,20 @@ avec les digests précédemment construits. Une version déjà enregistrée ne p
 pas être réassignée à d'autres images ; publier un nouveau SemVer pour corriger
 une release. Le guide infra décrit les manifestes et la procédure administrateur.
 
+## Performances des médias
+
+Les cartes d’activités et de publications utilisent les variantes réduites de
+Strapi ; les pages de détail et la visionneuse conservent les originaux. Le proxy
+de médias transmet `ETag` et `Last-Modified` ainsi que les requêtes conditionnelles
+du navigateur : un fichier inchangé répond `304` sans retransmettre son contenu.
+Chaque requête vérifie d’abord auprès du CMS que le média est toujours public,
+y compris avant une réponse `304`. Une dépublication reste donc immédiatement
+prise en compte. Les téléchargements partiels conservent leurs en-têtes de plage.
+
+Le build frontend prépare aussi les versions gzip et Brotli des ressources
+statiques compressibles. Ces optimisations nécessitent une nouvelle livraison
+frontend ; aucun changement du playbook d’infrastructure n’est nécessaire.
+
 ## Domaines retenus
 
 | Environnement | Site | CMS |

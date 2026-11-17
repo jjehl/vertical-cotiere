@@ -8,6 +8,34 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
 
+test('Un upload refusé indique le fichier et le diagnostic 422, sans exposer une erreur interne 500',async()=>{
+  const bytes=Buffer.from('image'),logs=[];
+  const file={id:'756',name:'12072019-DSC 0027.jpg',mime:'image/jpeg',alternativeText:'',caption:''};
+  const publication={version:1,sourceId:'source',documentId:'publication',draft:{slug:'18-2019-07-12'},published:null,files:[file]};
+  let status=422,imports=0;
+  const server=createServer(async(req,res)=>{
+    const url=new URL(req.url,'http://localhost');
+    const send=body=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify(body));};
+    if(url.pathname==='/source/api/content-sync/export')return send({version:1,publications:[publication],pagination:{pageCount:1}});
+    if(url.pathname==='/source/api/content-sync/files/756')return res.end(bytes);
+    for await(const chunk of req){};
+    if(url.pathname==='/target/api/content-sync/plan')return send({action:'create',missingFiles:[file]});
+    if(url.pathname==='/target/api/content-sync/import')imports++;
+    res.statusCode=status;send({error:{message:status===422?'Image illisible : remplacer le fichier source.':'private-stack-trace'}});
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const address='http://127.0.0.1:'+server.address().port;
+  const config={source:address+'/source',target:address+'/target',type:'publications'};
+  const credentials={sourceToken:'read',targetToken:'write',log:value=>logs.push(value)};
+  try{
+    assert.equal((await run(config,credentials)).failed,1);
+    assert(logs.some(line=>line.includes(file.name)&&line.includes('source 756')&&line.includes('HTTP 422')&&line.includes('remplacer le fichier source')));
+    status=500;logs.length=0;assert.equal((await run(config,credentials)).failed,1);
+    assert(logs.some(line=>line.includes(file.name)&&line.includes('HTTP 500')));
+    assert(!logs.join('\n').includes('private-stack-trace'));assert.equal(imports,0);
+  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
+});
+
 test('Members reste explicite, utilise ses routes dédiées et ne journalise pas les données du profil',async()=>{
   assert.equal(options(['--type','members'],{}).type,'members');
   assert.throws(()=>options(['--type','members','--slug','member'],{}),/ni --slug/);

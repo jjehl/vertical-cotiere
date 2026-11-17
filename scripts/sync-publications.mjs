@@ -84,7 +84,13 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
         response=await fetch(config[side]+path,{method,redirect:'error',signal:AbortSignal.timeout(120000),headers:{Authorization:'Bearer '+(side==='source'?sourceToken:targetToken),...(json?{'Content-Type':'application/json'}:{})},...(json?{body:JSON.stringify(json)}:form?{body:form}: {})});
       }catch{if(attempt<2)continue;throw Error('Connexion impossible au CMS '+side+'.');}
       if([429,502,503,504].includes(response.status)&&attempt<2){await response.body?.cancel();await new Promise(resolve=>setTimeout(resolve,1000));continue;}
-      if(!response.ok){await response.body?.cancel();throw Error(`CMS ${side} : HTTP ${response.status} (${path.split('?')[0]}).`);}
+      if(!response.ok){
+        let detail='';
+        if(response.status===422&&path==='/api/content-sync/files'){
+          try{const body=await response.json();if(typeof body.error?.message==='string')detail=' '+body.error.message.replace(/[\r\n]/g,' ').slice(0,1000);}catch{}
+        }else await response.body?.cancel();
+        throw Error(`CMS ${side} : HTTP ${response.status} (${path.split('?')[0]}).${detail}`);
+      }
       return response;
     }
   };
@@ -128,7 +134,8 @@ export async function run(config,{sourceToken,targetToken,log=console.log}={}){
           const cached=cache.get(content.sourceId+':'+file.id);
           const form=new FormData();form.append('metadata',JSON.stringify(file));
           form.append('files',new Blob([await readFile(cached.filepath)],{type:file.mime}),file.name);
-          await(await request('target','/api/content-sync/files',{method:'POST',form})).json();
+          try{await(await request('target','/api/content-sync/files',{method:'POST',form})).json();}
+          catch(error){throw Error('Fichier '+JSON.stringify(file.name)+' (source '+file.id+') — '+error.message);}
         }
         result=await jsonRequest('target',route+'import',payload);
       }

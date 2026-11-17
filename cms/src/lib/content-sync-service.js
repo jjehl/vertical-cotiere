@@ -170,13 +170,22 @@ async function upload(app,file,metadata){
   try{model.validatePublication({version:1,sourceId:'upload',documentId:'upload',draft:sample,published:null,files:[descriptor]});}catch(error){fail(400,error.message);}
   const hash=createHash('sha256');for await(const chunk of fs.createReadStream(file.filepath))hash.update(chunk);
   if(hash.digest('hex')!==descriptor.sha256)fail(400,'L’empreinte du fichier reçu ne correspond pas.');
-  let uploaded;
-  try{return await locked(app,async()=>{
+  let uploaded,recovered;
+  const persist=incoming=>locked(app,async()=>{
     const entry=store(app,'media-'+model.mediaKey(descriptor)),old=await entry.get();
     if(old&&await app.db.query('plugin::upload.file').findOne({where:{id:old.id}}))return {id:old.id,reused:true};
     const {name,alternativeText,caption,mime}=descriptor;
-    const files=await app.plugin('upload').service('upload').upload({data:{fileInfo:{name,alternativeText,caption}},files:{...file,originalFilename:name,mimetype:mime}});
+    const files=await app.plugin('upload').service('upload').upload({data:{fileInfo:{name,alternativeText,caption}},files:{...incoming,originalFilename:name,mimetype:mime}});
     uploaded=files[0];await entry.set({value:{id:uploaded.id}});return {id:uploaded.id,reused:false};
-  });}catch(error){if(uploaded)await app.plugin('upload').service('upload').remove(uploaded).catch(()=>{});throw error;}
+  });
+  try{
+    try{return await persist(file);}catch(error){
+      if(error.name!=='ApplicationError'||error.message!=='File is not a valid image')throw error;
+      recovered=await require('./content-sync-image').recoverJpeg(file,descriptor);
+      app.log.warn('Synchronisation : réencodage du JPEG endommagé '+JSON.stringify(descriptor.name));
+      return await persist(recovered.file);
+    }
+  }catch(error){if(uploaded)await app.plugin('upload').service('upload').remove(uploaded).catch(()=>{});throw error;}
+  finally{await recovered?.cleanup();}
 }
 module.exports={exportPage,download,plan,publicPlan,importPublication,upload,instanceId,locked,store,mediaMapping,prepareMedia};

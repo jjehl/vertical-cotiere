@@ -7,7 +7,7 @@ defineProps<{ activity: Activity; index: number }>();
     <div class="activity-photo">
       <img
         v-if="activity.image"
-        :src="activity.image"
+        :src="activity.image.startsWith('/media/') ? activity.image+'?variant=thumbnail' : activity.image"
         :style="{objectPosition:activity.imagePosition}"
         :alt="
           activity.imageAlt || (activity.eyebrow === 'Sorties nature'

@@ -75,6 +75,17 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
       const existing=await request('files',form(),targetToken);assert.equal(existing.body.id,result.body.id);assert.equal(existing.body.reused,true);
       uploads.push({id:result.body.id});
     }
+    // Legacy gallery originals were registered without Strapi's strict decoder.
+    // A recoverable JPEG must import once and retain its original SHA mapping.
+    const {damaged}=await require('./jpeg-fixture.cjs')();
+    const damagedDescriptor={id:'1',name:'legacy-damaged.jpg',mime:'image/jpeg',alternativeText:'Photo historique',caption:'Légende conservée',sha256:createHash('sha256').update(damaged).digest('hex')};
+    const damagedForm=()=>{const form=new FormData();form.append('metadata',JSON.stringify(damagedDescriptor));form.append('files',new Blob([damaged],{type:'image/jpeg'}),damagedDescriptor.name);return form;};
+    const recovered=await request('files',damagedForm(),targetToken);assert.equal(recovered.status,200,JSON.stringify(recovered.body));uploads.push({id:recovered.body.id});
+    const recoveredRow=await app.db.query('plugin::upload.file').findOne({where:{id:recovered.body.id}});
+    assert.equal(recoveredRow.name,damagedDescriptor.name);assert.equal(recoveredRow.caption,damagedDescriptor.caption);assert.equal(recoveredRow.alternativeText,damagedDescriptor.alternativeText);
+    const recoveredDownload=await fetch(base+'/api/content-sync/files/'+recovered.body.id,{headers:{Authorization:'Bearer '+sourceToken}});
+    assert.equal(recoveredDownload.status,200);await require('sharp')(Buffer.from(await recoveredDownload.arrayBuffer())).stats();
+    const reusedRecovery=await request('files',damagedForm(),targetToken);assert.equal(reusedRecovery.status,200);assert.equal(reusedRecovery.body.id,recovered.body.id);assert.equal(reusedRecovery.body.reused,true);
     const usersBefore=await app.db.query('plugin::users-permissions.user').count();
     const imported=await request('import',{publication},targetToken);assert.equal(imported.status,200,JSON.stringify(imported.body));assert.equal(imported.body.action,'create');
     const documentId=imported.body.documentId;

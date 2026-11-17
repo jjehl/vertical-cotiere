@@ -1,5 +1,5 @@
 import type { H3Event } from 'h3';
-import { resolveMediaUrl } from './media-url';
+import { resolveMediaUrl } from './media-url.ts';
 interface CmsFile { id:number; name:string; mime:string; storageUrl:string }
 
 export async function proxyCmsFile(event:H3Event, id:string, thumbnail=false) {
@@ -11,14 +11,19 @@ export async function proxyCmsFile(event:H3Event, id:string, thumbnail=false) {
   let mediaUrl: string;
   try { mediaUrl=resolveMediaUrl(file.storageUrl, config.cmsUrl, config.mediaPublicBaseUrl, config.mediaInternalBaseUrl); }
   catch { throw createError({statusCode:502,statusMessage:'Adresse de fichier invalide'}); }
-  const range=getHeader(event,'range');
-  const response=await fetch(mediaUrl,{redirect:'error',method:event.method==='HEAD'?'HEAD':'GET',headers:range?{range}:{},signal:AbortSignal.timeout(30000)});
-  if(!response.ok)throw createError({statusCode:response.status===404?404:502,statusMessage:'Fichier indisponible'});
+  const headers:Record<string,string>={};
+  for(const name of ['range','if-range','if-none-match','if-modified-since']){
+    const value=getHeader(event,name);if(value)headers[name]=value;
+  }
+  // Always verify publication access before revalidating a browser's cached file.
+  const response=await fetch(mediaUrl,{redirect:'error',method:event.method==='HEAD'?'HEAD':'GET',headers,signal:AbortSignal.timeout(30000)});
+  if(!response.ok&&response.status!==304)throw createError({statusCode:response.status===404?404:502,statusMessage:'Fichier indisponible'});
   setResponseStatus(event,response.status);
-  for(const header of ['content-type','content-length','content-range','accept-ranges']) {
+  for(const header of ['content-type','content-length','content-range','accept-ranges','etag','last-modified']) {
     const value=response.headers.get(header);if(value)setHeader(event,header,value);
   }
   setHeader(event,'Cache-Control','no-cache');
   setHeader(event,'Content-Disposition',`inline; filename*=UTF-8''${encodeURIComponent(file.name)}`);
+  if(response.status===304)return '';
   return response.body?sendStream(event,response.body):'';
 }

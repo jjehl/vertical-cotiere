@@ -8,11 +8,11 @@ async function requestReset(){
   try{await api('/api/member/forgot-password',{method:'POST',body:{email:email.value}});sent.value=true;}
   catch(value){error.value=memberError(value);}finally{busy.value=false;}
 }
-useSeoMeta({title:'Mot de passe oublié — Vertical Côtière',robots:'noindex, nofollow'});
+useSeoMeta({title:'Choisir mon mot de passe — Vertical Côtière',robots:'noindex, nofollow'});
 </script>
 <template>
   <MemberAuthLayout>
-    <span class="eyebrow">Un nouveau départ</span><h1>Un oubli,<br><em>ça arrive.</em></h1>
+    <h1>Choisir mon<br><em>mot de passe.</em></h1>
     <p class="auth-intro">Indiquez votre adresse e-mail pour recevoir un lien et choisir un nouveau mot de passe.</p>
     <div v-if="sent" class="auth-confirmation" role="status"><span class="auth-confirmation-icon" aria-hidden="true">↗</span><h2>Consultez vos e-mails</h2><p>Si un compte correspond à cette adresse, vous recevrez un lien valable une heure. Si plusieurs comptes la partagent, un e-mail distinct indique l’identifiant de chaque compte. Pensez à vérifier vos courriers indésirables.</p></div>
     <form v-else class="auth-form" @submit.prevent="requestReset">

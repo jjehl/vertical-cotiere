@@ -48,7 +48,7 @@ useSeoMeta({title:'Connexion — Vertical Côtière',robots:'noindex, nofollow'}
           <span><strong>{{[account.firstName,account.lastName].filter(Boolean).join(' ')||account.username}}</strong><small>{{account.username}}</small></span>
         </label>
       </fieldset>
-      <MemberPasswordField id="login-password" v-model="password" label="Mot de passe" autocomplete="current-password" :disabled="busy||!interactive"><NuxtLink to="/mot-de-passe-oublie">Mot de passe oublié ?</NuxtLink></MemberPasswordField>
+      <MemberPasswordField id="login-password" v-model="password" label="Mot de passe" autocomplete="current-password" :disabled="busy||!interactive"><NuxtLink to="/mot-de-passe-oublie">Première connexion ou mot de passe oublié ?</NuxtLink></MemberPasswordField>
       <button class="auth-submit" :disabled="busy||!interactive||(linking&&!accounts.length)" type="submit"><span>{{busy?'Connexion…':linking?'Associer Google et me connecter':'Se connecter'}}</span><ArrowIcon/></button>
     </form>
     <p v-if="linking" class="auth-switch"><a :href="'/connexion?retour='+encodeURIComponent(returnPath)">Annuler l’association</a></p>

@@ -176,6 +176,7 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
     const passwordChange=await request('/api/member/password',{currentPassword:password,password:password+'new',passwordConfirmation:password+'new'},token);
     assert.equal(passwordChange.status,200,JSON.stringify(passwordChange.body));
     const login=await request('/api/auth/local',{identifier:user.email,password:password+'new'});assert.equal(login.status,200);
+    sentEmails.length=0; // Other workflows also exercise the mock mailbox.
     const forgot=await request('/api/auth/forgot-password',{email:user.email});assert.equal(forgot.status,200,JSON.stringify(forgot.body));
     assert.equal(sentEmails.length,1);assert.equal(sentEmails[0].to,user.email);assert.match(sentEmails[0].subject,/Vertical Côtière/);
     const emailLink=()=>new URL(sentEmails.at(-1).html.match(/href="([^"]+)"/)[1]);

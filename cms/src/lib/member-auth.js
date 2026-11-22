@@ -44,12 +44,17 @@ module.exports=function extendMemberAuth(plugin) {
         if(!data.email||typeof body.username!=='string'||body.username.trim().length<3||body.username.trim().length>254||/\s/.test(body.username.trim()))throw new errors.ValidationError('Choisissez un identifiant unique de 3 à 254 caractères, sans espace.');
         if(typeof body.password!=='string'||body.password.length<12||Buffer.byteLength(body.password,'utf8')>72)throw new errors.ValidationError('Choisissez au moins 12 caractères (72 octets maximum).');
         const username=body.username.trim();
-        if(await strapi.db.query(uid).findOne({where:{username}}))throw new errors.ValidationError('Cet identifiant est déjà utilisé.');
         const role=await strapi.db.query('plugin::users-permissions.role').findOne({where:{type:advanced.default_role}});
         if(!role)throw new errors.ApplicationError('Rôle membre introuvable.');
         const service=strapi.plugin('users-permissions').service('user');
         let user;
-        try{user=await service.add({...data,username,password:body.password,provider:'local',role:role.id,confirmed:!advanced.email_confirmation});}
+        try{
+          user=await strapi.db.transaction(async({trx})=>{
+            await trx.raw('SELECT pg_advisory_xact_lock(2672027)');
+            if(await strapi.db.query(uid).findOne({where:{$or:[{username:{$eqi:username}},{legacyDirectoryUsername:{$eqi:username}}]},select:['id']}))throw new errors.ValidationError('Cet identifiant est déjà utilisé.');
+            return service.add({...data,username,password:body.password,provider:'local',role:role.id,confirmed:!advanced.email_confirmation});
+          });
+        }
         catch(error){if(error.code==='23505'||error.cause?.code==='23505')throw new errors.ValidationError('Cet identifiant est déjà utilisé.');throw error;}
         if(advanced.email_confirmation) {
           await service.sendConfirmationEmail(user);

@@ -1,4 +1,5 @@
-const {randomBytes,createHmac}=require('node:crypto');
+const {allocateUsername}=require('./member-username');
+const {createHmac}=require('node:crypto');
 const {createRemoteJWKSet,jwtVerify,SignJWT}=require('jose');
 const {errors}=require('@strapi/utils');
 const uid='plugin::users-permissions.user';
@@ -59,6 +60,7 @@ async function callback(app,ctx) {
   const email=identity.email.trim().toLowerCase();
   await app.db.transaction(async({trx})=>{
     await lockSubject(trx,identity.sub);
+    await trx.raw('SELECT pg_advisory_xact_lock(2672027)');
     const users=app.db.query(uid);
     let user=await users.findOne({where:{googleSubject:identity.sub},populate:{role:true}});
     if(user){if(!allowed(user))throw invalid();ctx.body=session(app,user);return;}
@@ -73,7 +75,8 @@ async function callback(app,ctx) {
     const role=await app.db.query('plugin::users-permissions.role').findOne({where:{type:'authenticated'}});
     if(!role)throw new errors.ApplicationError('Rôle membre introuvable.');
     const name=value=>typeof value==='string'?value.trim().slice(0,80):'';
-    user=await app.plugin('users-permissions').service('user').add({username:'google.'+randomBytes(16).toString('hex'),email,provider:'local',googleSubject:identity.sub,confirmed:true,blocked:false,role:role.id,firstName:name(identity.given_name),lastName:name(identity.family_name)});
+    const names={firstName:name(identity.given_name),lastName:name(identity.family_name)};
+    user=await app.plugin('users-permissions').service('user').add({username:await allocateUsername(users,names),email,provider:'local',googleSubject:identity.sub,confirmed:true,blocked:false,role:role.id,...names});
     ctx.body=session(app,user);
   });
 }

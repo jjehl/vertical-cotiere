@@ -89,7 +89,9 @@ champs existants lorsque la cellule est vide. Lorsqu’aucune fiche ne correspon
 Le payeur nommé est rattaché comme responsable si c’est une autre personne.
 Pour une nouvelle fiche adhérent, l’adresse de contact est celle du membre si
 elle est renseignée, sinon celle du payeur. Les nouveaux comptes sont basiques
-et à confirmer. Les adresses de connexion existantes sont conservées.
+et actifs. Leur identifiant automatique suit le modèle `prenom.nom`, puis `prenom.nom2`, `prenom.nom3` pour les homonymes. Une fiche sans identité reçoit un identifiant de type `contact`. Les références d’anciens exports restent reconnues lors de l’import. Le membre choisit son premier mot de passe depuis **Première connexion ou mot de passe oublié ?** avec l’adresse e-mail enregistrée. Un nouvel import conserve le rôle et l’état des comptes déjà présents.
+
+Depuis **Modifier la fiche**, un administrateur membre peut changer l’état et le rôle d’un autre compte. Une fiche contact peut devenir un compte actif dès qu’elle possède un e-mail. Le blocage suspend l’accès à l’espace membre.
 Si l’e-mail et le téléphone du responsable 2 désignent un seul membre, l’import
 le rattache à l’adhérent. Sinon, il crée une **fiche contact** avec les
 coordonnées disponibles, en laissant le nom, le prénom et la date de naissance

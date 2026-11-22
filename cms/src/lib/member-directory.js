@@ -1,6 +1,6 @@
 const {fields,memberDateFields}=require('./member-profile');
 const {emailKey,phoneKey}=require('./member-identity');
-const {memberTypes}=require('./member-roles');
+const {directoryRoles,memberTypes}=require('./member-roles');
 const uid='plugin::users-permissions.user';
 const memberSelect=['id','username','email',...Object.keys(fields),'confirmed','blocked','createdAt','updatedAt',...memberDateFields,'competition','provider','registrationInviteSentAt'];
 const rolePopulate={role:{select:['type','name']}};
@@ -9,6 +9,10 @@ function authorize(ctx) {
   ctx.set('Cache-Control','private, no-store');
   ctx.set('Vary','Authorization');
   if(!ctx.state.user||ctx.state.user.blocked||ctx.state.user.role?.type!=='member_admin')ctx.throw(403,'Accès réservé aux administrateurs membres.');
+}
+async function authorizeCurrentAdmin(app,ctx) {
+  const admin=await app.db.query(uid).findOne({where:{id:ctx.state.user.id,blocked:false,confirmed:true,role:{type:'member_admin'}},select:['id']});
+  if(!admin)ctx.throw(403,'Accès réservé aux administrateurs membres actifs.');
 }
 function memberDto(row) {
   return Object.fromEntries([...memberSelect.map(key=>[key,row[key]??null]),['role',row.role?.type==='member_admin'?'admin':row.role?.type==='contributor'?'contributor':'basic']]);
@@ -27,7 +31,7 @@ async function list(app,ctx) {
   if(!['','competitor','climber','contact'].includes(memberType)||typeof q!=='string'||q.length>120||!sortFields.includes(sort)||!['asc','desc'].includes(direction)||!['','basic','contributor','admin'].includes(role)||!['','active','unconfirmed','blocked','contact'].includes(status))ctx.throw(400,'Filtres ou tri invalides.');
   const page=integer(ctx,ctx.query.page,1,1000000);
   const pageSize=integer(ctx,ctx.query.pageSize,25,100);
-  const where={role:{type:role?{basic:'authenticated',contributor:'contributor',admin:'member_admin'}[role]:{$in:memberTypes}}};
+  const where={role:{type:role?directoryRoles[role]:{$in:memberTypes}}};
   if(memberType) {
     const {tableName,attributes}=app.db.metadata.get(uid);
     const membersOfType=app.db.connection(tableName).select('id').whereRaw(`CASE
@@ -96,4 +100,4 @@ async function details(app,ctx) {
 function canEditEmail(row) {
   return row.provider === 'contact' || (!row.confirmed && !row.password && !row.googleSubject);
 }
-module.exports={list,details,authorize,canEditEmail};
+module.exports={list,details,authorize,authorizeCurrentAdmin,canEditEmail};

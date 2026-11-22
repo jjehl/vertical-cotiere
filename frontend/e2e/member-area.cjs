@@ -47,7 +47,7 @@ const {chromium,expect}=require('@playwright/test');const fs=require('node:fs');
     expect(await page.content()).not.toContain('Camille MARTIN');
     await page.goto(origin+'/compte');await expect(page).toHaveURL(/\/connexion$/);
     expect(await page.locator('.auth-form').evaluate(form=>getComputedStyle(form).display)).toBe('grid');
-    await page.getByRole('link',{name:'Mot de passe oublié ?'}).click();
+    await page.getByRole('link',{name:'Première connexion ou mot de passe oublié ?'}).click();
     await expect(page).toHaveURL(/\/mot-de-passe-oublie$/);
     await page.getByLabel('Adresse e-mail',{exact:true}).fill('browser-unknown@local.invalid');
     await page.getByRole('button',{name:'Recevoir le lien',exact:true}).click();

@@ -30,7 +30,9 @@ export interface MemberDetails {
   member:DirectoryMember;canEditEmail:boolean;guardians:DirectoryPerson[];dependents:DirectoryPerson[];secondGuardianContact:{email:string|null;phone:string|null}|null;registrations:DirectoryRegistration[];
   participations:{id:number;confirmedAt:string;registeredByMember:DirectoryPerson|null;title:string;url:string|null;start:string|null;location:string|null}[];
 }
-export const memberAccountStatus=(member:DirectoryMember)=>member.blocked?'Bloqué':member.provider==='contact'?'Fiche contact':member.confirmed?'Actif':'À confirmer';
+export const memberStatusLabels={active:'Actif',unconfirmed:'À confirmer',blocked:'Bloqué',contact:'Fiche contact'};
+export const memberStatusKey=(member:DirectoryMember)=>member.blocked?'blocked':member.provider==='contact'?'contact':member.confirmed?'active':'unconfirmed';
+export const memberAccountStatus=(member:DirectoryMember)=>memberStatusLabels[memberStatusKey(member)];
 export function directoryDate(value:string|null|undefined) {
   if(!value)return 'Non renseigné';
   const date=new Date(value);
@@ -38,6 +40,6 @@ export function directoryDate(value:string|null|undefined) {
 }
 export const directoryMoney=(cents:number)=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(cents/100);
 
-export type DirectoryProfileInput = Partial<Record<ValidityDateKey|'firstName'|'lastName'|'membershipBirthDate'|'email'|'phone'|'street'|'postalCode'|'city'|'country'|'ffmeLicenseNumber',string> & {competition:boolean}>;
+export type DirectoryProfileInput = Partial<Record<ValidityDateKey|'firstName'|'lastName'|'membershipBirthDate'|'email'|'phone'|'street'|'postalCode'|'city'|'country'|'ffmeLicenseNumber',string> & {competition:boolean;accountRole:keyof typeof memberRoleLabels;accountStatus:keyof typeof memberStatusLabels}>;
 export const directoryPersonName = (person:DirectoryPerson) =>
   [person.firstName,person.lastName].filter(Boolean).join(' ') || person.email || person.phone || person.username;

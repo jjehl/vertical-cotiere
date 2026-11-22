@@ -51,6 +51,11 @@ module.exports=async function({app,request,user,token,basic,contributor,password
     assert([401,403].includes((await request(path+suffix,body,null,method)).status));
   }
   const identity={firstName:'Création',lastName:'Manuelle',email:child.email};
+  assert.equal((await changes('/'+admin.id,{accountStatus:'blocked'})).status,409);
+  assert.equal((await changes('/'+admin.id,{accountRole:'basic'})).status,409);
+  assert.equal((await changes('/'+child.id,{accountRole:'super-admin'})).status,400);
+  assert.equal((await request(path+'/'+child.id,{accountRole:'admin'},token,'PUT')).status,403);
+  assert.equal((await request('/api/member/profile',{accountRole:'admin'},token,'PUT')).status,400);
   const created=await changes('',{...identity,ffmeLicenseValidUntil:'2027-08-31',clubMembershipValidUntil:'2027-06-30'},'POST');
   assert.equal(created.status,200,JSON.stringify(created.body));
   const firstId=created.body.id;
@@ -84,6 +89,11 @@ module.exports=async function({app,request,user,token,basic,contributor,password
   const people=async(id,key)=>(await request(path+'/'+id,null,adminToken)).body[key].map(row=>row.id).sort((a,b)=>a-b);
   assert.equal((await family(firstId,{relation:'guardians',newMember:{phone:'0611111111'}})).status,200);
   const [guardianId]=await people(firstId,'guardians');assert(guardianId);
+  assert.equal((await changes('/'+guardianId,{accountStatus:'active'})).status,400);
+  assert.equal((await changes('/'+guardianId,{accountRole:'admin'})).status,400);
+  assert.equal((await changes('/'+guardianId,{email:'activated-contact@local.invalid',accountStatus:'active',accountRole:'contributor'})).status,200);
+  const converted=(await request(path+'/'+guardianId,null,adminToken)).body.member;
+  assert.equal(converted.provider,'local');assert.equal(converted.confirmed,true);assert.equal(converted.role,'contributor');
   assert.deepEqual(await people(guardianId,'dependents'),[firstId]);
   assert.equal((await family(guardianId,{relation:'dependents',memberId:dated.body.id})).status,200);
   assert.equal((await family(firstId,{relation:'guardians',memberId:admin.id})).status,200);

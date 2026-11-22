@@ -2,7 +2,7 @@ const {createHash,randomBytes}=require('node:crypto');
 const uid='plugin::users-permissions.user';
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const escape=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const name=value=>value.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,'.').replace(/^\.|\.$/g,'');
+const {allocateUsername}=require('./member-username');
 
 // Called inside the reservation transaction, after the payment was verified.
 async function attachMember(app,row) {
@@ -18,7 +18,7 @@ async function attachMember(app,row) {
   if(!member) {
     const role=await app.db.query('plugin::users-permissions.role').findOne({where:{type:'authenticated'}});
     if(!role)throw new Error('Rôle membre introuvable.');
-    const username=((name(row.firstName)+'.'+name(row.lastName)).slice(0,55)||'adherent')+'.'+randomBytes(6).toString('hex');
+    const username=await allocateUsername(users,row);
     member=await app.plugin('users-permissions').service('user').add({username,email:row.email,firstName:row.firstName,lastName:row.lastName,
       membershipBirthDate:row.birthDate,password:randomBytes(32).toString('hex'),provider:'local',confirmed:false,blocked:false,role:role.id});
     memberCreated=true;

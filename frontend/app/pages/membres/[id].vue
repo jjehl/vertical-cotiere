@@ -43,14 +43,14 @@ useSeoMeta({title:'Fiche membre — Vertical Côtière',robots:'noindex, nofollo
         <MemberActionButton tone="primary" icon="edit" :disabled="deleting" @click="editing=true;notice='';actionError=''">Modifier la fiche</MemberActionButton>
         <MemberActionButton tone="danger" icon="trash" v-if="member.id!==profile?.id" :disabled="deleting" @click="deleteMember">Supprimer la fiche</MemberActionButton>
       </div>
-      <MemberDirectoryForm v-if="editing" :member="member" :can-edit-email="details.canEditEmail" title="Modifier la fiche" :save="saveMember" @cancel="editing=false"/>
+      <MemberDirectoryForm v-if="editing" :member="member" :can-edit-email="details.canEditEmail" :can-manage-access="member.id!==profile?.id" title="Modifier la fiche" :save="saveMember" @cancel="editing=false"/>
       <p v-if="actionError" class="member-error" role="alert">{{actionError}}</p>
       <p v-if="notice" role="status">{{notice}}</p>
       <div class="member-layout">
         <section class="member-panel"><h2>Coordonnées et identité</h2><dl class="directory-details"><dt>Prénom</dt><dd>{{member.firstName||'Non renseigné'}}</dd><dt>Nom</dt><dd>{{member.lastName||'Non renseigné'}}</dd><dt>Date de naissance</dt><dd>{{directoryDate(member.membershipBirthDate)}}</dd><template v-for="field in contactFields" :key="field.key"><dt>{{field.label}}</dt><dd>{{member[field.key]||'Non renseigné'}}</dd></template>
           <template v-for="field in validityDateFields" :key="field.key"><dt>{{field.label}}</dt><dd>{{directoryDate(member[field.key])}}</dd></template>
           <dt>Compétiteur</dt><dd>{{member.competition?'Oui':'Non'}}</dd></dl></section>
-        <section class="member-panel"><h2>Compte membre</h2><dl class="directory-details"><dt>Identifiant</dt><dd>{{member.username}}</dd><dt>Rôle</dt><dd>{{memberRoleLabels[member.role]}}</dd><dt>État</dt><dd>{{memberAccountStatus(member)}}</dd><dt>E-mail confirmé</dt><dd>{{member.confirmed?'Oui':'Non'}}</dd><dt>Compte créé le</dt><dd>{{directoryDate(member.createdAt)}}</dd><dt>Dernière modification</dt><dd>{{directoryDate(member.updatedAt)}}</dd><dt>Invitation d’activation envoyée le</dt><dd>{{directoryDate(member.registrationInviteSentAt)}}</dd></dl></section>
+        <section class="member-panel"><h2>Compte membre</h2><dl class="directory-details"><dt>Identifiant</dt><dd>{{member.username}}</dd><dt>Rôle</dt><dd>{{memberRoleLabels[member.role]}}</dd><dt>État</dt><dd>{{memberAccountStatus(member)}}</dd><dt>Compte créé le</dt><dd>{{directoryDate(member.createdAt)}}</dd><dt>Dernière modification</dt><dd>{{directoryDate(member.updatedAt)}}</dd><dt>Invitation d’activation envoyée le</dt><dd>{{directoryDate(member.registrationInviteSentAt)}}</dd></dl></section>
       </div>
       <section class="directory-section member-panel">
         <h2>Liens familiaux</h2>

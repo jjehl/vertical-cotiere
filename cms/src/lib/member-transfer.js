@@ -1,15 +1,16 @@
-const {randomUUID} = require('node:crypto');
+const {usernameBase,takeUsername,legacyUsername} = require('./member-username');
 const {readFile} = require('node:fs/promises');
 const {extname} = require('node:path');
 const {fields,validityDates,memberDateFields} = require('./member-profile');
 const {memberTypes} = require('./member-roles');
 const {formatChanges,formatPhone} = require('./member-format');
-const {authorize} = require('./member-directory');
+const {authorize,authorizeCurrentAdmin} = require('./member-directory');
 const {readWorkbook, writeWorkbook, extraColumns, maxFileBytes, WorkbookError} = require('./member-workbook');
 
 const uid = 'plugin::users-permissions.user';
-const select = ['id','username','email',...Object.keys(fields),...memberDateFields,'membershipSheet','provider','competition'];
+const select = ['id','username','legacyDirectoryUsername','email',...Object.keys(fields),...memberDateFields,'membershipSheet','provider','competition'];
 const where = {role:{type:{$in:memberTypes}}};
+const wasContact = person => person.provider==='contact' || person.membershipSheet?.convertedContact===true;
 const validEmail = email => email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const {normalize, nameKey, validDate, emailKey, phoneKey} = require('./member-identity');
 function contactDetails(rawEmail, rawPhone, country) {
@@ -22,6 +23,8 @@ async function applyWorkbook(app, workbook) {
   const users = app.db.query(uid);
   const accounts = await users.findMany({where, select, populate:{guardians:{select:['id']}}});
   const role = await app.db.query('plugin::users-permissions.role').findOne({where:{type:'authenticated'}});
+  const allUsernames=await users.findMany({select:['username']});
+  const occupied=new Set(allUsernames.map(row=>row.username.toLowerCase()));
   const byName = new Map();
   const byUsername = new Map();
   const byContact = new Map();
@@ -31,6 +34,7 @@ async function applyWorkbook(app, workbook) {
     if (!byName.has(key)) byName.set(key, new Set());
     byName.get(key).add(account);
     byUsername.set(account.username, account);
+    if(account.legacyDirectoryUsername) byUsername.set(account.legacyDirectoryUsername,account);
     const contact = contactDetails(account.email,account.phone,account.country);
     if (contact.key) {
       if (!byContact.has(contact.key)) byContact.set(contact.key,new Set());
@@ -43,8 +47,12 @@ async function applyWorkbook(app, workbook) {
   const report = {processed:0, skipped:0, created:0, updated:0, links:0, warnings:[]};
   function warn(sheet, line, message) { report.warnings.push({sheet,line,message}); }
   async function createAccount(data, username, provider = 'local') {
+    const useReference=username && !legacyUsername.test(username) && !occupied.has(username.toLowerCase());
+    const login=useReference ? username : takeUsername(usernameBase(data),occupied);
+    occupied.add(login.toLowerCase());
     const account = await users.create({data:{
-      ...data, username:username || 'adherent.' + randomUUID(), provider, role:role.id, confirmed:false, blocked:false,
+      ...data, username:login, legacyDirectoryUsername:legacyUsername.test(username) ? username : null,
+      provider, role:role.id, confirmed:provider==='local', blocked:false,
     }, select});
     account.guardians = [];
     index(account);
@@ -77,7 +85,7 @@ async function applyWorkbook(app, workbook) {
     const identified = username && byUsername.get(username);
     const contactRow = values.contactCard === 'Oui';
     const contact = contactDetails(values.email,values.phone,values.country||identified?.country);
-    const compatibleCard = person => person.provider === 'contact' &&
+    const compatibleCard = person => wasContact(person) &&
       ['firstName','lastName','membershipBirthDate'].every(key => !person[key] || !values[key] || normalize(person[key]) === normalize(values[key]));
     if (dated.length > 1 || (!dob && identified && nameKey(identified) !== nameKey(values) && !compatibleCard(identified))) {
       skip('Plusieurs identités possibles. Vérifiez la fiche membre.'); continue;
@@ -167,7 +175,7 @@ async function applyWorkbook(app, workbook) {
     }
     const matches = [...(byContact.get(contact.key) || [])].filter(person => person.id !== member.id);
     // An email or phone alone can be shared with a child or another named family member.
-    const cards = matches.filter(person => person.provider === 'contact');
+    const cards = matches.filter(wasContact);
     const linkedCard = cards.find(card => member.guardians.some(existing => existing.id === card.id));
     const named = contact.email && contact.phone && matches.length === 1 ? matches[0] : null;
     const guardian = linkedCard || cards[0] || named || await createAccount({email:contact.email,phone:contact.phone}, undefined, 'contact');
@@ -178,10 +186,11 @@ async function applyWorkbook(app, workbook) {
   return report;
 }
 
-async function importWorkbook(app, workbook) {
+async function importWorkbook(app, workbook, ctx) {
   return app.db.transaction(async ({trx}) => {
     // Share the lock with registration account creation, including concurrent imports.
     await trx.raw('SELECT pg_advisory_xact_lock(2672027)');
+    if(ctx) await authorizeCurrentAdmin(app,ctx);
     return applyWorkbook(app, workbook);
   });
 }
@@ -194,7 +203,7 @@ async function importDirectory(app, ctx) {
   if (file.size > maxFileBytes) ctx.throw(413,'Le classeur dépasse 8 Mo.');
   try {
     const workbook = await readWorkbook(await readFile(file.filepath), format);
-    ctx.body = await importWorkbook(app, workbook);
+    ctx.body = await importWorkbook(app, workbook, ctx);
   } catch (error) {
     if (error instanceof WorkbookError) ctx.throw(400,error.message);
     throw error;

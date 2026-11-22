@@ -6,7 +6,7 @@ module.exports=plugin=>{
   plugin.contentTypes.user.schema.attributes.provider.default='local';
   plugin.contentTypes.user.schema.attributes.googleSubject={type:'string',unique:true,private:true,configurable:false,pluginOptions:{'content-manager':{visible:false}}};
   plugin.contentTypes.user.schema.attributes.resetPasswordExpiresAt={type:'datetime',private:true,configurable:false,pluginOptions:{'content-manager':{visible:false}}};
-  for(const [name,type] of Object.entries({membershipBirthDate:'date',ffmeLicenseValidUntil:'date',clubMembershipValidUntil:'date',registrationInviteToken:'string',registrationInviteExpiresAt:'datetime',registrationInviteSentAt:'datetime'}))plugin.contentTypes.user.schema.attributes[name]={type,private:true,configurable:false,pluginOptions:{'content-manager':{visible:false}}};
+  for(const [name,type] of Object.entries({legacyDirectoryUsername:'string',membershipBirthDate:'date',ffmeLicenseValidUntil:'date',clubMembershipValidUntil:'date',registrationInviteToken:'string',registrationInviteExpiresAt:'datetime',registrationInviteSentAt:'datetime'}))plugin.contentTypes.user.schema.attributes[name]={type,private:true,configurable:false,pluginOptions:{'content-manager':{visible:false}}};
   const attributes=plugin.contentTypes.user.schema.attributes;
   attributes.competition={type:'boolean',default:false,required:true,private:true,column:{notNullable:true,defaultTo:false}};
   attributes.membershipSheet={type:'json',private:true,configurable:false,pluginOptions:{'content-manager':{visible:false}}};

@@ -41,6 +41,17 @@ module.exports = async function({app,request,adminToken,token}) {
   const numericRows=await readWorkbook(XLSX.write(numericBook,{type:'buffer',bookType:'xlsx'}),'xlsx');
   assert.equal(numericRows.rows[0].values.secondPhone,'0612345678');
   const basic = await app.db.query('plugin::users-permissions.role').findOne({where:{type:'authenticated'}});
+  const oldRef='adherent.'+require('node:crypto').randomUUID();
+  const historical=await users.create({data:{username:oldRef,email:'test-ancien@transfert.invalid',firstName:'Hélène',lastName:'Exemple',provider:'local',role:basic.id,confirmed:false,membershipSheet:{amount:100}}});
+  const oldBook=writeWorkbook([{...historical,guardians:[]}],'ods');
+  const marker=app.store({type:'core',name:'vertical-admin',key:'member-directory-usernames-v1'});
+  await marker.set({value:false});
+  await require('../src/lib/member-username').migrateUsernames(app);
+  const renamed=await users.findOne({where:{id:historical.id}});
+  assert.equal(renamed.username,'helene.exemple');assert.equal(renamed.confirmed,true);
+  const oldImport=await upload(oldBook,'ods',adminToken);
+  assert.equal(oldImport.body.created,0);assert.equal(oldImport.body.skipped,0);
+  await users.delete({where:{id:historical.id}});
   const legacy = await users.create({data:{username:'ancienne.licence',email:original.membershipSheet.payerEmail,
     firstName:original.firstName,lastName:original.lastName,ffmeLicenseNumber:original.ffmeLicenseNumber,role:basic.id,provider:'local'}});
   const attempts = await Promise.all([upload(source,'ods',adminToken),upload(source,'ods',adminToken)]);
@@ -56,6 +67,18 @@ module.exports = async function({app,request,adminToken,token}) {
   const withLegacyReference=writeWorkbook([{...original,username:legacy.username,email:legacy.email}], 'xlsx');
   const retried=await upload(withLegacyReference,'xlsx',adminToken);
   assert.equal(retried.body.created,0);assert.equal(retried.body.skipped,0);
+  assert.deepEqual(family.filter(person=>person.membershipBirthDate).map(person=>person.username).sort(),['elodie.riviere','elodie.riviere2']);
+  assert.equal(child.confirmed,true);assert.equal(payer.confirmed,true);assert.equal(payer.username,'claude.riviere');
+  assert.equal((await request('/api/auth/forgot-password',{email:child.email})).status,200);
+  const {resetPasswordToken}=await users.findOne({where:{id:child.id},select:['resetPasswordToken']});
+  const firstPassword=require('node:crypto').randomBytes(20).toString('hex');
+  assert.equal((await request('/api/auth/reset-password',{code:resetPasswordToken,password:firstPassword,passwordConfirmation:firstPassword})).status,200);
+  assert((await request('/api/auth/local',{identifier:child.username,password:firstPassword})).body.jwt);
+  await request(path+'/'+payer.id,{accountRole:'contributor',accountStatus:'blocked'},adminToken,'PUT');
+  await upload(source,'ods',adminToken);
+  const retained=await users.findOne({where:{id:payer.id},populate:{role:true}});
+  assert.equal(retained.blocked,true);assert.equal(retained.role.type,'contributor');
+  await request(path+'/'+payer.id,{accountRole:'basic',accountStatus:'active'},adminToken,'PUT');
   assert.equal(child.ffmeLicenseValidUntil,'2027-08-31');assert.equal(child.clubMembershipValidUntil,'2027-06-30');
   const legacyBook=XLSX.read(makeSource([{...original,clubMembershipValidUntil:null}],'xlsx'));
   const legacySheet=legacyBook.Sheets.Import_HA;

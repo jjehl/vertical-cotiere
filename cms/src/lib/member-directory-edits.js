@@ -1,8 +1,8 @@
-const {randomUUID} = require('node:crypto');
-const {authorize, canEditEmail} = require('./member-directory');
+const {allocateUsername} = require('./member-username');
+const {authorize, authorizeCurrentAdmin, canEditEmail} = require('./member-directory');
 const {fields,memberDateFields,validityDates} = require('./member-profile');
 const {nameKey, validDate} = require('./member-identity');
-const {memberTypes} = require('./member-roles');
+const {memberTypes,directoryRoles} = require('./member-roles');
 
 const uid = 'plugin::users-permissions.user';
 const scope = {role:{type:{$in:memberTypes}}};
@@ -12,6 +12,7 @@ async function write(app, ctx, action) {
   ctx.body = await app.db.transaction(async ({trx}) => {
     // Serialize identity checks and family changes with registration and workbook imports.
     await trx.raw('SELECT pg_advisory_xact_lock(2672027)');
+    await authorizeCurrentAdmin(app,ctx);
     return action(app.db.query(uid),trx);
   });
 }
@@ -67,11 +68,35 @@ async function create(app, users, ctx, input) {
   const data = await profileChanges(users,ctx,input);
   const role = await app.db.query('plugin::users-permissions.role').findOne({where:{type:'authenticated'}});
   const provider = data.firstName && data.lastName && data.email ? 'local' : 'contact';
-  return users.create({data:{...data,username:'adherent.'+randomUUID(),provider,role:role.id,confirmed:false,blocked:false},select:['id']});
+  return users.create({data:{...data,username:await allocateUsername(users,data),provider,role:role.id,confirmed:false,blocked:false},select:['id']});
 }
 
 function createMember(app, ctx) {
   return write(app,ctx,users => create(app,users,ctx,ctx.request.body));
+}
+
+async function accountChanges(app,ctx,member,data,status,role) {
+  if (status===undefined && role===undefined) return;
+  if (member.id===ctx.state.user.id) ctx.throw(409,'Vous devez conserver votre propre accès administrateur.');
+  if (status!==undefined) {
+    if (!['active','unconfirmed','blocked','contact'].includes(status) || (status==='contact' && member.provider!=='contact')) ctx.throw(400,'État de compte invalide.');
+    if (status==='active' || status==='unconfirmed') {
+      if (!(Object.hasOwn(data,'email') ? data.email : member.email)) ctx.throw(400,'Indiquez un e-mail pour ouvrir un compte membre.');
+      if (member.provider==='contact') {
+        data.provider='local';
+        data.membershipSheet={...member.membershipSheet,convertedContact:true};
+      }
+      data.confirmed=status==='active';
+    }
+    data.blocked=status==='blocked';
+    Object.assign(data,{confirmationToken:null,registrationInviteToken:null,registrationInviteExpiresAt:null,resetPasswordToken:null,resetPasswordExpiresAt:null});
+  }
+  if (role!==undefined) {
+    if (typeof role!=='string' || !Object.hasOwn(directoryRoles,role)) ctx.throw(400,'Rôle membre invalide.');
+    if ((data.provider||member.provider)==='contact' && role!=='basic') ctx.throw(400,'Ouvrez un compte membre pour attribuer ce rôle.');
+    const target=await app.db.query('plugin::users-permissions.role').findOne({where:{type:directoryRoles[role]},select:['id']});
+    data.role=target.id;
+  }
 }
 
 function updateMember(app, ctx) {
@@ -81,7 +106,11 @@ function updateMember(app, ctx) {
     // Activation can run concurrently. Check email editability against the locked account.
     await trx(app.db.metadata.get(uid).tableName).select('id').where({id}).forUpdate();
     const member = await findMember(users,ctx,id);
-    const data = await profileChanges(users,ctx,ctx.request.body,member);
+    const input=ctx.request.body;
+    if (!input || typeof input!=='object' || Array.isArray(input)) ctx.throw(400,'Fiche membre invalide.');
+    const {accountStatus,accountRole,...profile}=input;
+    const data = await profileChanges(users,ctx,profile,member);
+    await accountChanges(app,ctx,member,data,accountStatus,accountRole);
     if (Object.keys(data).length) await users.update({where:{id:member.id},data});
     return {id:member.id};
   });

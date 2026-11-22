@@ -124,6 +124,7 @@ jobs:
           context: .
           file: frontend/Dockerfile
           target: production
+          build-args: SITE_VERSION=${{ needs.plan.outputs.version }}
           platforms: linux/amd64
           push: ${{ needs.plan.outputs.publish == 'true' }}
           tags: ${{ steps.image.outputs.name }}-web:${{ needs.plan.outputs.version }}

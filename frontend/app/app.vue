@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import '~/assets/css/member.css';
 import { featuredPartners } from '~/data/partners';
+const { siteVersion } = useRuntimeConfig().public;
+const versionLabel = /^[0-9a-f]{40}$/.test(siteVersion) ? siteVersion.slice(0, 8) : siteVersion;
 const menuOpen = ref(false);
 const hydrated = ref(false);
 onMounted(() => {
@@ -113,9 +115,9 @@ const links = [
         </div>
       </section>
       <div class="footer-bottom">
-        <span>© {{ new Date().getFullYear() }} Vertical Côtière</span
-        ><NuxtLink to="/informations">Informations & crédits photos</NuxtLink
-        ><span>Fait pour grimper ensemble.</span>
+        <span>© {{ new Date().getFullYear() }} Vertical Côtière · Version <span :title="siteVersion">{{ versionLabel }}</span></span>
+        <NuxtLink to="/informations">Informations & crédits photos</NuxtLink>
+        <span>Fait pour grimper ensemble.</span>
       </div>
     </footer>
   </div>

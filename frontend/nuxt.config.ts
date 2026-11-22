@@ -12,6 +12,7 @@ export default defineNuxtConfig({
     },
   },
   runtimeConfig: {
+    public: { siteVersion: 'dev' },
     cmsUrl: 'http://localhost:1337',
     mediaPublicBaseUrl: '',
     mediaInternalBaseUrl: '',

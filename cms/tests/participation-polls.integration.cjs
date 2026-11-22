@@ -29,8 +29,8 @@ module.exports=async function testParticipationPolls({app,request,user,token,oth
   for(const result of registrations){assert.equal(result.status,200,JSON.stringify(result.body));assert.equal(result.body.registered,true);}
   const listed=await request(path,null,otherToken);
   assert.equal(listed.body.participants.length,2);
-  assert.deepEqual(listed.body.participants.find(item=>item.isCurrentMember),{name:'Alex Test',isCurrentMember:true});
-  assert.deepEqual(new Set(listed.body.participants.map(item=>item.name)),new Set(['Camille Martin','Alex Test']));
+  assert.deepEqual(listed.body.participants.find(item=>item.isCurrentMember),{name:'Alex TEST',isCurrentMember:true});
+  assert.deepEqual(new Set(listed.body.participants.map(item=>item.name)),new Set(['Camille MARTIN','Alex TEST']));
   assert(!JSON.stringify(listed.body).includes('@local.invalid'));assert(!JSON.stringify(listed.body).includes('000123456'));
   const poll=await app.db.query('api::participation-poll.participation-poll').findOne({where:{publicationDocumentId:event.documentId}});
   const saved=await app.db.query('api::event-participation.event-participation').findMany({where:{poll:poll.id},populate:{member:true,registeredByMember:true}});
@@ -40,7 +40,7 @@ module.exports=async function testParticipationPolls({app,request,user,token,oth
   assert.deepEqual(await docs.findOne({documentId:event.documentId,status:'published',populate:{meeting:true}}),beforePublic);
   const publicPage=(await request('/api/publications/'+event.slug)).body;
   assert.equal(publicPage.hasParticipationPoll,true);
-  assert(!JSON.stringify(publicPage).includes('Alex Test'));assert(!JSON.stringify(publicPage).includes('Camille Martin'));
+  assert(!JSON.stringify(publicPage).includes('Alex TEST'));assert(!JSON.stringify(publicPage).includes('Camille MARTIN'));
   assert(!JSON.stringify(publicPage).includes('participants'));
   const publicContent=(await request('/api/site-content')).body;
   assert(!JSON.stringify(publicContent).includes('participants'));
@@ -115,7 +115,7 @@ async function testDelegatedRegistrations({app,request,user,token,other,otherTok
   assert.equal((await request(path+'/register',{confirmed:false,memberId:target.id},otherToken)).status,400);
   const registered=await request(path+'/register',{confirmed:true,memberId:target.id},otherToken);
   assert.equal(registered.status,200,JSON.stringify(registered.body));assert.equal(registered.body.registered,false);
-  assert.deepEqual(registered.body.participants,[{name:'Zoé Durand',isCurrentMember:false}]);
+  assert.deepEqual(registered.body.participants,[{name:'Zoé DURAND',isCurrentMember:false}]);
   const poll=await app.db.query('api::participation-poll.participation-poll').findOne({where:{publicationDocumentId:event.documentId}});
   const participations=app.db.query('api::event-participation.event-participation');
   const saved=()=>participations.findOne({where:{poll:poll.id,member:target.id},populate:{registeredByMember:{select:['id']},member:{select:['id']}}});
@@ -148,5 +148,5 @@ async function testDelegatedRegistrations({app,request,user,token,other,otherTok
   await participations.update({where:{id:legacy.id},data:{registeredByMember:null}});await migrate(app);
   assert.equal((await participations.findOne({where:{id:legacy.id},populate:{registeredByMember:true}})).registeredByMember,null);
   console.log('OK : recherche partielle privée, inscriptions par un membre basique, auteur et participant distincts en BDD, reprises sans altérer l’auteur, concurrence et migration des anciennes inscriptions.');
-  return {id:target.id,name:'Zoé Durand'};
+  return {id:target.id,name:'Zoé DURAND'};
 }

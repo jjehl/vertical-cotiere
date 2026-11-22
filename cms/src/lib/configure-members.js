@@ -1,4 +1,5 @@
 module.exports=async function configureMembers(strapi) {
+  await require('./configure-member-format')(strapi);
   // Move the old spreadsheet flag once per row. Removing just this key keeps future edits authoritative.
   const {tableName,attributes}=strapi.db.metadata.get('plugin::users-permissions.user');
   const sheet=attributes.membershipSheet.columnName;

@@ -61,6 +61,15 @@ module.exports=async function({app,request,user,token,basic,contributor,password
   assert.equal((await changes('/'+firstId,{ffmeLicenseValidUntil:'',clubMembershipValidUntil:'2028-02-29'})).status,200);
   saved=await readCreated();
   assert.equal(saved.ffmeLicenseValidUntil,null);assert.equal(saved.clubMembershipValidUntil,'2028-02-29');
+  const contactInput={firstName:'  éLISE-mARIE  ',lastName:"  d’Été  ",phone:'+33 (0)6 12-34-56-78',postalCode:'1700',street:'  1   rue du   Club  ',city:'  saint-étienne  '};
+  assert.equal((await changes('/'+firstId,contactInput)).status,200);
+  saved=await readCreated();
+  for(const [key,value] of Object.entries({firstName:'Élise-Marie',lastName:'D’ÉTÉ',phone:'06 12 34 56 78',postalCode:'01700',street:'1 rue du Club',city:'SAINT-ÉTIENNE'}))assert.equal(saved[key],value);
+  for(const q of ['0612345678','06123','+33 6 12 34 56 78'])assert((await request(path+'?q='+encodeURIComponent(q),null,adminToken)).body.members.some(person=>person.id===firstId));
+  for(const input of [{phone:'06ABC'},{postalCode:'A1234'}])assert.equal((await changes('/'+firstId,input)).status,400);
+  assert.equal((await changes('/'+firstId,{country:'Canada',postalCode:'h2x  1y4',phone:'001 514 555 0123'})).status,200);
+  saved=await readCreated();assert.equal(saved.postalCode,'H2X 1Y4');assert.equal(saved.phone,'+15145550123');
+  assert.equal((await changes('/'+firstId,{postalCode:'h1a 1a1',...identity})).status,200);
   const dated=await changes('',{...identity,membershipBirthDate:'2013-02-14'},'POST');
   assert.equal(dated.status,200);assert.notEqual(dated.body.id,firstId);
   assert.equal((await changes('',{...identity,firstName:'Creation',membershipBirthDate:'2013-02-14'},'POST')).status,409);

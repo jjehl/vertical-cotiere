@@ -52,6 +52,7 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
     assert.equal((await request('/api/member/me',null,token)).body.firstName,'Camille');
     assert.equal((await request('/api/member/profile',{street:'1 rue du Club',city:'Beynost',postalCode:'01700',country:'France',phone:'0600000000',ffmeLicenseNumber:'000123456'},token,'PUT')).status,200);
     const me=(await request('/api/member/me',null,token)).body;
+    assert.equal(me.city,'BEYNOST');assert.equal(me.lastName,'MARTIN');assert.equal(me.phone,'06 00 00 00 00');assert.equal(me.postalCode,'01700');
     assert.equal(me.ffmeLicenseNumber,'000123456');assert.equal(me.street,'1 rue du Club');assert.equal(me.role,'basic');
     assert(!JSON.stringify(me).includes('password'));assert(!JSON.stringify(me).includes('resetPasswordToken'));
     assert.equal((await request('/api/member/profile',{role:contributor.id,id:other.id},token,'PUT')).status,400);
@@ -112,8 +113,8 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
     assert.deepEqual(await docs.findOne({documentId,status:'published',populate:{photos:true,meeting:true}}),publishedBefore);
     const publicPhotos=(await request('/api/publications/'+publication.slug)).body;
     assert.equal(publicPhotos.body,publication.body);assert.equal(publicPhotos.photos.length,3);assert.equal(publicPhotos.photoCount,3);
-    assert.equal(publicPhotos.photos.find(photo=>photo.id===additions[0].body[0].id).addedBy,'Alex Test');
-    assert.equal(publicPhotos.photos.find(photo=>photo.id===additions[1].body[0].id).addedBy,'Camille Martin');
+    assert.equal(publicPhotos.photos.find(photo=>photo.id===additions[0].body[0].id).addedBy,'Alex TEST');
+    assert.equal(publicPhotos.photos.find(photo=>photo.id===additions[1].body[0].id).addedBy,'Camille MARTIN');
     assert(!JSON.stringify(publicPhotos).includes('member-b@local.invalid'));assert(!JSON.stringify(publicPhotos).includes('000123456'));
     assert.equal((await request('/api/site-files/'+additions[0].body[0].id)).status,200);
     assert.equal((await request('/api/site-content')).body.publications.find(row=>row.slug===publication.slug).photoCount,3);
@@ -123,11 +124,11 @@ const connection={host:process.env.DATABASE_HOST,user:process.env.DATABASE_USERN
     const historical=await docs.create({data:{title:'Publication du club',body:'Une publication créée dans Strapi.',category:'Vie du club'},status:'published'});
     const historicalAddition=await request('/api/member/publications/'+historical.slug+'/photos',photoForm(),otherToken);
     assert.equal(historicalAddition.status,200,JSON.stringify(historicalAddition.body));files.push(...historicalAddition.body);
-    assert.equal((await request('/api/publications/'+historical.slug)).body.photos[0].addedBy,'Alex Test');
+    assert.equal((await request('/api/publications/'+historical.slug)).body.photos[0].addedBy,'Alex TEST');
     // Reusing the uploaded file in editorial media must not duplicate it or remove its attribution.
     await docs.update({documentId:historical.documentId,status:'published',data:{photos:[historicalAddition.body[0].id]}});
     const reused=(await request('/api/publications/'+historical.slug)).body.photos;
-    assert.equal(reused.length,1);assert.equal(reused[0].addedBy,'Alex Test');
+    assert.equal(reused.length,1);assert.equal(reused[0].addedBy,'Alex TEST');
     await docs.unpublish({documentId:historical.documentId});
     assert.equal((await request('/api/site-files/'+historicalAddition.body[0].id)).status,404);
     await docs.publish({documentId:historical.documentId});

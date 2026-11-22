@@ -36,6 +36,10 @@ module.exports = async function({app,request,adminToken,token}) {
     assert([401,403].includes((await upload(source,'ods',jwt)).status));
     assert([401,403].includes((await request(path+'/export/xlsx',null,jwt)).status));
   }
+  const numericBook=XLSX.read(source);
+  numericBook.Sheets.Import_HA['AB2']={t:'n',v:612345678};
+  const numericRows=await readWorkbook(XLSX.write(numericBook,{type:'buffer',bookType:'xlsx'}),'xlsx');
+  assert.equal(numericRows.rows[0].values.secondPhone,'0612345678');
   const basic = await app.db.query('plugin::users-permissions.role').findOne({where:{type:'authenticated'}});
   const legacy = await users.create({data:{username:'ancienne.licence',email:original.membershipSheet.payerEmail,
     firstName:original.firstName,lastName:original.lastName,ffmeLicenseNumber:original.ffmeLicenseNumber,role:basic.id,provider:'local'}});

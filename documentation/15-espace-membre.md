@@ -63,6 +63,8 @@ propose 25, 50 ou 100 membres par page.
 
 **Ajouter un adhérent** ouvre le formulaire de création. Depuis une fiche, **Modifier la fiche** permet de corriger l’identité, les coordonnées, la licence et le statut de compétiteur. Pour un compte déjà activé ou doté d’identifiants de connexion, le membre change lui-même son e-mail depuis son profil. **Supprimer la fiche** demande confirmation et retire ses liens familiaux. Un administrateur conserve son propre compte.
 
+Les fiches utilisent une majuscule au début de chaque partie du prénom et des capitales accentuées pour le nom et la ville. Les espaces de l’adresse sont harmonisés. En France, le téléphone s’affiche par paires et le code postal comporte cinq chiffres, zéro initial compris. Pour une adresse étrangère, renseigner le pays permet de conserver le format postal local. L’import signale les coordonnées invalides avec leur numéro de ligne.
+
 La fiche permet de saisir ou d’effacer séparément les dates de fin de validité de la licence FFME et de la cotisation club. Ces dates facultatives figurent aussi à la fin de l’onglet **Import_HA** des exports Excel et ODS. Une cellule vide ou une colonne absente à l’import conserve la date enregistrée.
 
 Dans **Liens familiaux**, un administrateur peut rechercher une fiche existante ou en créer une pour ajouter ou remplacer un responsable ou un adhérent à charge. **Retirer le lien** conserve les deux fiches. Cliquer sur le nom d’une personne liée ouvre sa fiche pour la modifier.

@@ -8,7 +8,8 @@ const name=value=>value.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().rep
 async function attachMember(app,row) {
   if(row.member)return row;
   const users=app.db.query(uid);
-  const matches=await users.findMany({where:{provider:'local',email:{$eqi:row.email},firstName:{$eqi:row.firstName},lastName:{$eqi:row.lastName}}});
+  const {formatField}=require('./member-format');
+  const matches=await users.findMany({where:{provider:'local',email:{$eqi:row.email},firstName:{$eqi:formatField('firstName',row.firstName)},lastName:{$eqi:formatField('lastName',row.lastName)}}});
   const candidates=matches.filter(user=>!user.membershipBirthDate||user.membershipBirthDate===row.birthDate);
   if(candidates.length>1)throw new Error('Plusieurs comptes correspondent à cet adhérent. Vérification du secrétariat requise.');
   let member=candidates[0];

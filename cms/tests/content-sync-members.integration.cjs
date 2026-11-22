@@ -47,7 +47,7 @@ module.exports=async({app,request,sourceToken,targetToken,run,options})=>{
   assert(await app.plugin('users-permissions').service('user').validatePassword('Destination-password-2026',(await users.findOne({where:{id:target.id}})).password));
   const invalid=structuredClone(content);invalid.draft.role='super-admin';assert.equal((await request('members/import',{content:invalid},write)).status,400);
   // Persistence failure rolls back both the member and its baseline.
-  const originalQuery=app.db.query.bind(app.db),changed=structuredClone(content);changed.draft.lastName='Rollback-'+randomUUID();
+  const originalQuery=app.db.query.bind(app.db),changed=structuredClone(content);changed.draft.lastName=('Rollback-'+randomUUID()).toUpperCase();
   app.db.query=name=>{const query=originalQuery(name);return name==='strapi::core-store'?{...query,update:async params=>{if(params.data?.value?.includes(changed.draft.lastName))throw Error('Simulated member persistence failure');return query.update(params);}}:query;};
   try{assert.equal((await request('members/import',{content:changed},write)).status,500);}finally{app.db.query=originalQuery;}
   assert.notEqual((await users.findOne({where:{id:target.id}})).lastName,changed.draft.lastName);

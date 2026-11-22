@@ -1,4 +1,5 @@
 const XLSX = require('xlsx');
+const {frenchAddress} = require('./member-format');
 const {validityDates,memberDateFields} = require('./member-profile');
 const yauzl = require('yauzl');
 
@@ -110,6 +111,7 @@ async function readWorkbook(buffer, format) {
     }
     return column[0];
   });
+  const phoneColumns=['phone','secondPhone'].map(key=>[key,active.indexOf(key)]).filter(([,i])=>i>=0);
   for (let r = 1; r <= end; r++) {
     const values = {};
     for (const [i, key] of active.entries()) {
@@ -121,6 +123,12 @@ async function readWorkbook(buffer, format) {
       if (key === 'ffmeLicenseNumber' && /^#(?:N\/A|VALUE!|REF!)$/i.test(value)) continue;
       if (['amount','promoAmount'].includes(key) && cell?.t === 'n') value = cell.v;
       if (value !== '') values[key] = value;
+    }
+    // A French national number entered as a number in a spreadsheet loses its initial zero.
+    if (frenchAddress(values.country)) {
+      for (const [key,i] of phoneColumns) {
+        if (sheet[address(r,i)]?.t==='n' && /^[1-9]\d{8}$/.test(values[key])) values[key]='0'+values[key];
+      }
     }
     // Ignore the template's unused rows, which still have calculated cells.
     if (values.firstName || values.lastName || values.membershipBirthDate || values.payerEmail || values.username) rows.push({line:r + 1, values});

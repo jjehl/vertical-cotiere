@@ -3,6 +3,7 @@ const {readFile} = require('node:fs/promises');
 const {extname} = require('node:path');
 const {fields,validityDates,memberDateFields} = require('./member-profile');
 const {memberTypes} = require('./member-roles');
+const {formatChanges,formatPhone} = require('./member-format');
 const {authorize} = require('./member-directory');
 const {readWorkbook, writeWorkbook, extraColumns, maxFileBytes, WorkbookError} = require('./member-workbook');
 
@@ -11,11 +12,11 @@ const select = ['id','username','email',...Object.keys(fields),...memberDateFiel
 const where = {role:{type:{$in:memberTypes}}};
 const validEmail = email => email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const {normalize, nameKey, validDate, emailKey, phoneKey} = require('./member-identity');
-function contactDetails(rawEmail, rawPhone) {
+function contactDetails(rawEmail, rawPhone, country) {
   const email = emailKey(rawEmail);
-  const phone = phoneKey(rawPhone);
+  const phone = rawPhone && formatPhone(rawPhone,country);
   const address = validEmail(email) ? email : null;
-  return {email:address, phone:phone ? rawPhone : null, key:address || phone ? JSON.stringify([address,phone]) : null};
+  return {email:address, phone:phone || null, key:address || phone ? JSON.stringify([address,phoneKey(phone)]) : null};
 }
 async function applyWorkbook(app, workbook) {
   const users = app.db.query(uid);
@@ -30,7 +31,7 @@ async function applyWorkbook(app, workbook) {
     if (!byName.has(key)) byName.set(key, new Set());
     byName.get(key).add(account);
     byUsername.set(account.username, account);
-    const contact = contactDetails(account.email,account.phone);
+    const contact = contactDetails(account.email,account.phone,account.country);
     if (contact.key) {
       if (!byContact.has(contact.key)) byContact.set(contact.key,new Set());
       byContact.get(contact.key).add(account);
@@ -75,7 +76,7 @@ async function applyWorkbook(app, workbook) {
     const dated = dob ? candidates.filter(person => person.membershipBirthDate === dob) : [];
     const identified = username && byUsername.get(username);
     const contactRow = values.contactCard === 'Oui';
-    const contact = contactDetails(values.email,values.phone);
+    const contact = contactDetails(values.email,values.phone,values.country||identified?.country);
     const compatibleCard = person => person.provider === 'contact' &&
       ['firstName','lastName','membershipBirthDate'].every(key => !person[key] || !values[key] || normalize(person[key]) === normalize(values[key]));
     if (dated.length > 1 || (!dob && identified && nameKey(identified) !== nameKey(values) && !compatibleCard(identified))) {
@@ -92,12 +93,17 @@ async function applyWorkbook(app, workbook) {
     const email = emailKey(values.email || values.payerEmail);
     if (!member && contactRow && !contact.key && !(firstName && lastName)) {skip('Indiquez un e-mail ou un téléphone valide pour la fiche contact sans identité complète.'); continue;}
     if (!member && !contactRow && !validEmail(email)) {skip('Une adresse e-mail valide est nécessaire pour créer la fiche.'); continue;}
+    const profileValues = {...values};
+    Object.assign(profileValues,formatChanges(values,values.country||member?.country,(key,message)=>{
+      delete profileValues[key];
+      warn('Import_HA',line,message);
+    }));
     const data = {};
     if (Object.hasOwn(values,'competition') && values.competition !== (member?.competition ?? false)) data.competition = values.competition;
     if (member?.provider === 'contact' && contactRow && contact.email && member.email !== contact.email) data.email = contact.email;
     for (const key of [...Object.keys(fields), ...memberDateFields]) {
       if (member && ['firstName','lastName'].includes(key) && normalize(values[key]) === normalize(member[key])) continue;
-      if (values[key] && values[key] !== member?.[key]) data[key] = values[key];
+      if (profileValues[key] && profileValues[key] !== member?.[key]) data[key] = profileValues[key];
     }
     const extras = Object.fromEntries(extraColumns.filter(([key]) => Object.hasOwn(values,key)).map(([key]) => [key, values[key]]));
     // These two cells describe one contact on this row, even if one of them is empty.
@@ -116,7 +122,7 @@ async function applyWorkbook(app, workbook) {
     } else if (Object.keys(data).length) {
       await users.update({where:{id:member.id}, data});
       byName.get(nameKey(member)).delete(member);
-      byContact.get(contactDetails(member.email,member.phone).key)?.delete(member);
+      byContact.get(contactDetails(member.email,member.phone,member.country).key)?.delete(member);
       Object.assign(member, data);
       index(member);
       if (!created.has(member.id)) updated.add(member.id);

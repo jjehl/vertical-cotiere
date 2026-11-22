@@ -1,3 +1,4 @@
+const {formatChanges}=require('./member-format');
 const model=require('./content-sync-members-model');
 const {store,locked,instanceId,publicPlan}=require('./content-sync-service');
 const {equal}=require('./content-sync-model');
@@ -26,12 +27,16 @@ async function plan(app,content,{trx}={}){
   const role=await app.db.query('plugin::users-permissions.role').findOne({where:{type:content.draft.role}});
   if(!role)return conflict('Rôle membre absent en destination : '+content.draft.role);
   const current=row?model.dataFromRow(row):null;
-  const merged=model.merge(content.draft,record?.source,current,record?.target);
+  const incoming={...content.draft,...formatChanges(content.draft,content.draft.country,(_key,message)=>fail(400,message))};
+  // Older merge baselines store the previous spelling. A formatting change alone
+  // must not overwrite a destination edit or produce a conflict.
+  const baseline=data=>data && {...data,...formatChanges(data,data.country,()=>{})};
+  const merged=model.merge(incoming,baseline(record?.source),current,baseline(record?.target));
   if(merged.conflicts.length)return {action:'conflict',conflicts:merged.conflicts,key,documentId:row.documentId};
   // Resolve the merged role too: a target-only role edit must remain in place.
   const targetRole=await app.db.query('plugin::users-permissions.role').findOne({where:{type:merged.data.role}});
   if(!targetRole)return conflict('Rôle membre absent en destination.');
-  return {action:!row?'create':equal(current,merged.data)?'unchanged':'update',key,documentId:row?.documentId,id:row?.id,roleId:targetRole.id,incoming:model.snapshot(content.draft),merged:merged.data,baseline:merged.baseline};
+  return {action:!row?'create':equal(current,merged.data)?'unchanged':'update',key,documentId:row?.documentId,id:row?.id,roleId:targetRole.id,incoming:model.snapshot(incoming),merged:merged.data,baseline:merged.baseline};
 }
 async function importContent(app,content,options){
   return locked(app,async trx=>{

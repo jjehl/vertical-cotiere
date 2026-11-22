@@ -40,7 +40,16 @@ async function list(app,ctx) {
   if(status==='active')Object.assign(where,{blocked:false,confirmed:true});
   if(status==='unconfirmed')Object.assign(where,{blocked:false,confirmed:false,provider:{$ne:'contact'}});
   if(status==='contact')where.provider='contact';
-  if(q.trim())where.$and=q.trim().split(/\s+/).map(value=>({$or:['firstName','lastName','username','email','phone','city','postalCode','ffmeLicenseNumber'].map(key=>({[key]:{$containsi:value}}))}));
+  if(q.trim()) {
+    const terms=q.trim().split(/\s+/).map(value=>({$or:['firstName','lastName','username','email','phone','city','postalCode','ffmeLicenseNumber'].map(key=>({[key]:{$containsi:value}}))}));
+    if (/^[+0-9 ()./-]+$/.test(q) && /\d/.test(q)) {
+      // Phone searches also accept a compact number, a prefix or the international form.
+      const digits=q.replace(/[^+0-9]/g,'').replace(/^00/,'+').replace(/^\+330?/,'0');
+      const {tableName,attributes}=app.db.metadata.get(uid);
+      const matches=app.db.connection(tableName).select('id').whereRaw("replace(??, ' ', '') LIKE ?",[attributes.phone.columnName,'%'+digits+'%']);
+      where.$or=[{$and:terms},{id:{$in:matches}}];
+    } else where.$and=terms;
+  }
   const query=app.db.query(uid);
   const [rows,total]=await Promise.all([
     query.findMany({where,select:memberSelect,populate:rolePopulate,orderBy:[sort==='role'?{role:{name:direction}}:{[sort]:direction},{id:'asc'}],offset:(page-1)*pageSize,limit:pageSize}),

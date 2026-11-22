@@ -45,6 +45,53 @@ module.exports=async function({app,request,user,token,basic,contributor,password
   const participant=(await request(path+'/'+user.id,null,adminToken)).body;
   assert(participant.participations.length>0);assert(participant.participations.some(item=>item.title&&item.registeredByMember));
   for(const body of [list.body,details.body,payer,participant])for(const secret of ['password','resetPasswordToken','confirmationToken','googleSubject','registrationInviteToken','sessionHash','participantKey','checkoutUrl','directory-secret','secret-checkout'])assert(!JSON.stringify(body).includes(secret),secret);
+  const changes = (suffix,body,method='PUT') => request(path+suffix,body,adminToken,method);
+  for(const [suffix,body,method] of [['',{firstName:'Test'},'POST'],['/'+child.id,{city:'Refus'},'PUT'],['/'+child.id,null,'DELETE'],['/'+child.id+'/family',{relation:'guardians',memberId:admin.id},'PUT']]) {
+    assert.equal((await request(path+suffix,body,token,method)).status,403);
+    assert([401,403].includes((await request(path+suffix,body,null,method)).status));
+  }
+  const identity={firstName:'Création',lastName:'Manuelle',email:child.email};
+  const created=await changes('',{...identity,ffmeLicenseValidUntil:'2027-08-31',clubMembershipValidUntil:'2027-06-30'},'POST');
+  assert.equal(created.status,200,JSON.stringify(created.body));
+  const firstId=created.body.id;
+  const readCreated=async()=>(await request(path+'/'+firstId,null,adminToken)).body.member;
+  let saved=await readCreated();
+  assert.equal(saved.ffmeLicenseValidUntil,'2027-08-31');assert.equal(saved.clubMembershipValidUntil,'2027-06-30');
+  assert.equal((await changes('/'+firstId,{clubMembershipValidUntil:'2027-02-29'})).status,400);
+  assert.equal((await changes('/'+firstId,{ffmeLicenseValidUntil:'',clubMembershipValidUntil:'2028-02-29'})).status,200);
+  saved=await readCreated();
+  assert.equal(saved.ffmeLicenseValidUntil,null);assert.equal(saved.clubMembershipValidUntil,'2028-02-29');
+  const dated=await changes('',{...identity,membershipBirthDate:'2013-02-14'},'POST');
+  assert.equal(dated.status,200);assert.notEqual(dated.body.id,firstId);
+  assert.equal((await changes('',{...identity,firstName:'Creation',membershipBirthDate:'2013-02-14'},'POST')).status,409);
+  assert.equal((await changes('/'+firstId,{membershipBirthDate:'2013-02-14'})).status,409);
+  assert.equal((await changes('/'+firstId,{role:adminRole.id})).status,400);
+  assert.equal((await changes('/'+firstId,{membershipBirthDate:'2013-02-31'})).status,400);
+  assert.equal((await changes('/'+firstId,{competition:'true'})).status,400);
+  assert.equal((await changes('/'+child.id,{email:'someone@local.invalid'})).status,400);
+  assert.equal((await changes('/'+firstId,{city:'Montluel',email:'updated@local.invalid',ffmeLicenseNumber:'test-licence',competition:true})).status,200);
+  assert.equal((await request(path+'?q=Montluel&memberType=competitor',null,adminToken)).body.members.some(row=>row.id===firstId),true);
+  const family=(id,change)=>changes('/'+id+'/family',change);
+  const people=async(id,key)=>(await request(path+'/'+id,null,adminToken)).body[key].map(row=>row.id).sort((a,b)=>a-b);
+  assert.equal((await family(firstId,{relation:'guardians',newMember:{phone:'0611111111'}})).status,200);
+  const [guardianId]=await people(firstId,'guardians');assert(guardianId);
+  assert.deepEqual(await people(guardianId,'dependents'),[firstId]);
+  assert.equal((await family(guardianId,{relation:'dependents',memberId:dated.body.id})).status,200);
+  assert.equal((await family(firstId,{relation:'guardians',memberId:admin.id})).status,200);
+  assert.equal((await family(firstId,{relation:'guardians',previousId:guardianId,memberId:999999})).status,404);
+  assert.equal((await family(firstId,{relation:'guardians',memberId:firstId})).status,400);
+  assert.equal((await family(guardianId,{relation:'dependents',previousId:firstId,memberId:sibling.id})).status,200);
+  assert.deepEqual(await people(firstId,'guardians'),[admin.id]);
+  assert.deepEqual(await people(guardianId,'dependents'),[sibling.id,dated.body.id]);
+  assert.equal((await family(dated.body.id,{relation:'guardians',previousId:guardianId})).status,200);
+  assert.deepEqual(await people(guardianId,'dependents'),[sibling.id]);
+  assert.equal((await changes('/'+admin.id,null,'DELETE')).status,409);
+  for(const id of [guardianId,dated.body.id,firstId]){
+    assert.equal((await changes('/'+id,null,'DELETE')).status,200);
+    assert.equal((await request(path+'/'+id,null,adminToken)).status,404);
+  }
+  assert.deepEqual(await people(sibling.id,'guardians'),[]);
+  await require('./member-transfer.integration.cjs')({app,request,adminToken,token});
   // Tokens remain valid while roles and blocked flags are checked on every request.
   await users.edit(admin.id,{role:contributor.id});assert.equal((await request(path,null,adminToken)).status,403);assert.equal((await request(path+'/'+child.id,null,adminToken)).status,403);
   await users.edit(admin.id,{role:adminRole.id,blocked:true});assert([401,403].includes((await request(path,null,adminToken)).status));

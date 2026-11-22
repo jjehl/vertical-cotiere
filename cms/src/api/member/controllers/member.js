@@ -31,8 +31,15 @@ async function uploadPhotos(ctx,user,publicationDocumentId=null) {
     ctx.body=uploaded.map(({id,name,url})=>({id,name,url}));
   }catch(error){for(const file of uploaded)await service.remove(file).catch(()=>{});throw error;}
 }
+const directoryEdits=require('../../../lib/member-directory-edits');
 module.exports={
+  createMember(ctx){return directoryEdits.createMember(strapi,ctx);},
+  updateMember(ctx){return directoryEdits.updateMember(strapi,ctx);},
+  deleteMember(ctx){return directoryEdits.deleteMember(strapi,ctx);},
+  editFamily(ctx){return directoryEdits.editFamily(strapi,ctx);},
   async directory(ctx){member(ctx);return require('../../../lib/member-directory').list(strapi,ctx);},
+  async importDirectory(ctx){return require('../../../lib/member-transfer').importDirectory(strapi,ctx);},
+  async exportDirectory(ctx){return require('../../../lib/member-transfer').exportDirectory(strapi,ctx);},
   async memberDetails(ctx){member(ctx);return require('../../../lib/member-directory').details(strapi,ctx);},
   async participationPoll(ctx){return require('../../../lib/participation-polls').read(strapi,ctx,member(ctx));},
   async createParticipationPoll(ctx){return require('../../../lib/participation-polls').create(strapi,ctx,member(ctx,true));},

@@ -1,5 +1,10 @@
 const {errors}=require('@strapi/utils');
 const fields={firstName:80,lastName:80,phone:40,street:250,postalCode:20,city:120,country:100,ffmeLicenseNumber:40};
+const validityDates={
+  ffmeLicenseValidUntil:'Fin de validité de la licence FFME',
+  clubMembershipValidUntil:'Fin de validité de la cotisation club',
+};
+const memberDateFields=['membershipBirthDate',...Object.keys(validityDates)];
 function profile(user) {
   return {id:user.id,username:user.username,email:user.email,emailConfirmed:user.confirmed===true,hasPassword:Boolean(user.password),googleConnected:Boolean(user.googleSubject),...Object.fromEntries(Object.keys(fields).map(key=>[key,user[key]||''])),role:user.role?.type==='member_admin'?'admin':user.role?.type==='contributor'?'contributor':'basic'};
 }
@@ -19,4 +24,4 @@ function validateProfile(input) {
   }
   return result;
 }
-module.exports={fields,profile,validateProfile};
+module.exports={fields,validityDates,memberDateFields,profile,validateProfile};

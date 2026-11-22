@@ -1,4 +1,12 @@
 module.exports=async function configureMembers(strapi) {
+  // Move the old spreadsheet flag once per row. Removing just this key keeps future edits authoritative.
+  const {tableName,attributes}=strapi.db.metadata.get('plugin::users-permissions.user');
+  const sheet=attributes.membershipSheet.columnName;
+  const db=strapi.db.connection;
+  await db(tableName).whereRaw("jsonb_exists(??, 'competition')",[sheet]).update({
+    [attributes.competition.columnName]:db.raw("COALESCE(lower(trim(?? ->> 'competition')) IN ('x','true','1','oui','vrai'), false)",[sheet]),
+    [sheet]:db.raw("?? - 'competition'",[sheet]),
+  });
   await require('./configure-member-email')(strapi);
   const roles=strapi.db.query('plugin::users-permissions.role');
   const basic=await roles.findOne({where:{type:'authenticated'}});
@@ -11,7 +19,7 @@ module.exports=async function configureMembers(strapi) {
   const permissions=strapi.db.query('plugin::users-permissions.permission');
   const profile=['me','updateProfile','password','publicationPhotoIds','deletePublicationPhoto','participationPoll','registerParticipation','searchParticipationMembers'];
   const contribution=['publications','assistantStatus','assistantPublication','assistantPrepare','assistantConfirm','photos','photo','publicationPhotos','reorderPublicationPhotos','createParticipationPoll'];
-  const directory=['directory','memberDetails'];
+  const directory=['directory','memberDetails','importDirectory','exportDirectory','createMember','updateMember','deleteMember','editFamily'];
   for(const role of [basic,contributor,memberAdmin]) {
     for(const name of ['checkout','status']) {
       const action='api::course-registration.course-registration.'+name;
@@ -21,7 +29,7 @@ module.exports=async function configureMembers(strapi) {
       if(!await permissions.findOne({where:{role:role.id,action}}))await permissions.create({data:{role:role.id,action}});
     }
   }
-  // The directory uses dedicated, read-only actions; generic user APIs stay closed.
+  // The directory uses dedicated admin actions; generic user APIs stay closed.
   const publicRole=await roles.findOne({where:{type:'public'}});
   for(const role of [publicRole,basic,contributor,memberAdmin].filter(Boolean)) {
     await permissions.deleteMany({where:{role:role.id,action:{$startsWith:'plugin::users-permissions.user.'}}});

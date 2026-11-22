@@ -56,10 +56,16 @@ la fiche Membre ou la colonne **Rôle membre** dans Strapi. Il conserve tous les
 droits du contributeur et ajoute **Liste des membres** dans `/compte`, vers
 `/membres`. L’annuaire propose une recherche par nom, prénom, identifiant,
 e-mail, téléphone, ville, code postal ou licence ; les mots saisis sont combinés.
-Les filtres portent sur le rôle et l’état du compte (actif, à confirmer, bloqué).
+Le filtre **Type de membre** classe les fiches sans numéro de licence FFME comme contacts. Parmi les licenciés, un X dans la colonne **Competition** (AP) du classeur désigne un compétiteur. Les autres sont des grimpeurs licenciés non compétiteurs. Le champ PostgreSQL `competition` est un booléen. Dans le classeur, un X vaut vrai et une cellule vide dans la colonne AP vaut faux. Si l’en-tête est absent, l’import conserve la valeur enregistrée. Ce filtre se combine avec la recherche, le rôle et l’état du compte.
 Les en-têtes permettent de trier par nom, prénom, e-mail, téléphone, ville,
 licence, rôle ou date de création, dans les deux sens. La pagination côté serveur
 propose 25, 50 ou 100 membres par page.
+
+**Ajouter un adhérent** ouvre le formulaire de création. Depuis une fiche, **Modifier la fiche** permet de corriger l’identité, les coordonnées, la licence et le statut de compétiteur. Pour un compte déjà activé ou doté d’identifiants de connexion, le membre change lui-même son e-mail depuis son profil. **Supprimer la fiche** demande confirmation et retire ses liens familiaux. Un administrateur conserve son propre compte.
+
+La fiche permet de saisir ou d’effacer séparément les dates de fin de validité de la licence FFME et de la cotisation club. Ces dates facultatives figurent aussi à la fin de l’onglet **Import_HA** des exports Excel et ODS. Une cellule vide ou une colonne absente à l’import conserve la date enregistrée.
+
+Dans **Liens familiaux**, un administrateur peut rechercher une fiche existante ou en créer une pour ajouter ou remplacer un responsable ou un adhérent à charge. **Retirer le lien** conserve les deux fiches. Cliquer sur le nom d’une personne liée ouvre sa fiche pour la modifier.
 
 Chaque fiche `/membres/:id` présente l’identité et les coordonnées, la date de
 naissance lorsqu’elle est enregistrée, la licence, le rôle et l’état du compte,
@@ -71,9 +77,35 @@ séparément. Seules les relations explicites membre/payeur rattachent un dossie
 une adresse familiale commune ne suffit pas. Les dossiers annulés ne prouvent
 pas un remboursement ; les opérations ultérieures sont à vérifier dans HelloAsso.
 
-Cet accès est en consultation. Il n’ouvre pas l’administration Strapi et ne
-permet pas de changer le profil ou le rôle d’un autre membre. Les routes dédiées
-`/api/member/directory` et `/api/member/directory/:id` vérifient le rôle côté
+Depuis **Importer ou exporter les membres**, un administrateur membre peut importer
+l’onglet `Import_HA` du classeur d’inscriptions (.xlsx ou .ods). Les colonnes A,
+F (carte d’adhérent), L (tarif), AN (CP naissance) et AQ à AS sont ignorées.
+Le montant du tarif et le code postal de résidence sont conservés. L’import réunit
+les lignes ayant les mêmes nom, prénom et date de naissance. Il conserve les
+champs existants lorsque la cellule est vide. Lorsqu’aucune fiche ne correspond aux trois valeurs, l’import crée une fiche distincte, même si un homonyme a une date de naissance vide ou le même numéro de licence. Un nouvel import de la même ligne retrouve la fiche datée.
+
+Le payeur nommé est rattaché comme responsable si c’est une autre personne.
+Pour une nouvelle fiche adhérent, l’adresse de contact est celle du membre si
+elle est renseignée, sinon celle du payeur. Les nouveaux comptes sont basiques
+et à confirmer. Les adresses de connexion existantes sont conservées.
+Si l’e-mail et le téléphone du responsable 2 désignent un seul membre, l’import
+le rattache à l’adhérent. Sinon, il crée une **fiche contact** avec les
+coordonnées disponibles, en laissant le nom, le prénom et la date de naissance
+vides. Un téléphone seul ou un e-mail seul suffit. La même combinaison de
+coordonnées réutilise la fiche pour les autres enfants et les imports suivants.
+Les différences de casse de l’e-mail et de présentation du téléphone sont
+ignorées. Si les deux coordonnées sont inutilisables, le bilan indique la ligne.
+
+La fiche contact figure dans l’annuaire et dans l’export. Son identité peut être complétée directement sur sa fiche ou dans l’export en conservant son identifiant et la mention **Oui** dans la colonne **Fiche contact**.
+
+L’export comprend tous les membres. L’onglet **Responsables** contient une
+ligne par lien. Pour ajouter un lien, y reporter les identifiants de l’adhérent
+et du responsable depuis **Import_HA**, puis réimporter. Les fiches permettent
+de naviguer dans les deux sens. Un import ajoute les liens et conserve les
+relations déjà enregistrées. Le bilan distingue les fiches créées, les fiches
+modifiées, les liens ajoutés et les lignes écartées.
+
+Les routes dédiées de l’annuaire vérifient le rôle côté
 serveur à chaque requête, y compris après un retrait du rôle ou un blocage.
 Les pages et réponses sont privées, sans cache. Les mots de passe, jetons
 d’activation/récupération et liens privés de paiement sont exclus des réponses.

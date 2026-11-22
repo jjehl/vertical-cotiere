@@ -1,6 +1,9 @@
 module.exports={routes:[
   ['GET','/member/me','me'],['PUT','/member/profile','updateProfile'],['POST','/member/password','password'],
-  ['GET','/member/directory','directory'],['GET','/member/directory/:id','memberDetails'],
+  ['GET','/member/directory','directory'],['POST','/member/directory/import','importDirectory'],
+  ['GET','/member/directory/export/:format','exportDirectory'],['GET','/member/directory/:id','memberDetails'],
+  ['POST','/member/directory','createMember'],['PUT','/member/directory/:id','updateMember'],
+  ['DELETE','/member/directory/:id','deleteMember'],['PUT','/member/directory/:id/family','editFamily'],
   ['GET','/member/publications','publications'],['POST','/member/photos','photos'],['GET','/member/photos/:id','photo'],
   ['POST','/member/publications/:slug/photos','publicationPhotos'],
   ['GET','/member/publications/:slug/photos','publicationPhotoIds'],

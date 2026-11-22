@@ -62,8 +62,8 @@ async function callback(app,ctx) {
     const users=app.db.query(uid);
     let user=await users.findOne({where:{googleSubject:identity.sub},populate:{role:true}});
     if(user){if(!allowed(user))throw invalid();ctx.body=session(app,user);return;}
-    const existing=await users.findMany({where:{email:{$eqi:email}}});
-    if(existing.length) {
+    const existing=await users.findMany({where:{email:{$eqi:email}},select:['provider']});
+    if(existing.some(user=>user.provider!=='contact')) {
       const pendingToken=await new SignJWT({email}).setProtectedHeader({alg:'HS256'}).setIssuer('vertical-cotiere').setAudience('member-google-link').setSubject(identity.sub).setIssuedAt().setExpirationTime('10m').sign(linkKey(app));
       ctx.body={requiresLink:true,pendingToken};return;
     }

@@ -5,7 +5,7 @@ const cookie='vc_member_session';
 const methods:Record<string,Record<string,string>>={
   profile:{GET:'/api/member/me',PUT:'/api/member/profile'},password:{POST:'/api/member/password'},
   publications:{GET:'/api/member/publications'},photos:{POST:'/api/member/photos'},
-  directory:{GET:'/api/member/directory'},
+  directory:{GET:'/api/member/directory',POST:'/api/member/directory'},
   'assistant/status':{GET:'/api/member/assistant/status'},
   'assistant/prepare':{POST:'/api/member/assistant/prepare'},'assistant/confirm':{POST:'/api/member/assistant/confirm'},
 };
@@ -75,6 +75,15 @@ export default defineEventHandler(async (event):Promise<unknown>=>{
     }
     const token=getCookie(event,cookie);
     if(!token)throw createError({statusCode:401,statusMessage:'Connexion requise.'});
+    const workbookExport=path.match(/^directory\/export\/(xlsx|ods)$/);
+    const workbookImport=path==='directory/import'&&method==='POST';
+    if((workbookExport&&method==='GET')||workbookImport) {
+      if(workbookImport&&Number(getHeader(event,'content-length')||0)>9*1024*1024)throw createError({statusCode:413,statusMessage:'Le classeur dépasse 8 Mo.'});
+      return proxyRequest(event,cms+'/api/member/'+path,{
+        streamRequest:true,headers:{authorization:'Bearer '+token,cookie:''},fetchOptions:{redirect:'error'},
+        onResponse:()=>{setHeader(event,'Cache-Control','private, no-store');setHeader(event,'Vary','Cookie');},
+      });
+    }
     const photo=path.match(/^photos\/(\d+)$/);
     if(photo&&method==='GET') {
       const file=await $fetch<{name:string;mime:string;storageUrl:string}>(cms+'/api/member/photos/'+photo[1],{headers:{authorization:'Bearer '+token},timeout:10000});
@@ -87,7 +96,8 @@ export default defineEventHandler(async (event):Promise<unknown>=>{
     }
     let target=methods[path]?.[method];
     const directoryMember=path.match(/^directory\/([1-9]\d*)$/);
-    if(directoryMember&&method==='GET')target='/api/member/directory/'+directoryMember[1];
+    if(/^directory\/[1-9]\d*\/family$/.test(path)&&method==='PUT')target='/api/member/'+path;
+    if(directoryMember&&['GET','PUT','DELETE'].includes(method))target='/api/member/directory/'+directoryMember[1];
     const publication=path.match(/^assistant\/publications\/([a-zA-Z0-9_-]{1,100})$/);
     if(publication&&method==='GET')target='/api/member/assistant/publications/'+publication[1];
     const publicationPhotos=path.match(/^publications\/([a-zA-Z0-9_-]{1,200})\/photos$/);
@@ -101,7 +111,7 @@ export default defineEventHandler(async (event):Promise<unknown>=>{
       if(Number(getHeader(event,'content-length')||0)>26*1024*1024)throw createError({statusCode:413,statusMessage:'Importer au maximum 25 Mo de photos à la fois.'});
       return proxyRequest(event,cms+target,{headers:{authorization:'Bearer '+token,cookie:''},fetchOptions:{redirect:'error'}});
     }
-    const directoryQuery=path==='directory'?Object.fromEntries(['q','sort','direction','role','status','page','pageSize'].filter(key=>getQuery(event)[key]!==undefined).map(key=>[key,getQuery(event)[key]])):undefined;
+    const directoryQuery=path==='directory'?Object.fromEntries(['q','sort','direction','role','status','memberType','page','pageSize'].filter(key=>getQuery(event)[key]!==undefined).map(key=>[key,getQuery(event)[key]])):undefined;
     const response:unknown=await $fetch<unknown>(cms+target,{method:method as 'GET'|'POST'|'PUT'|'DELETE',headers:{authorization:'Bearer '+token},...(directoryQuery?{query:directoryQuery}:poll?.[2]==='/members'?{query:{q:getQuery(event).q}}:{}),...(['POST','PUT'].includes(method)?{body:await readBody(event)}:{}),timeout:path==='assistant/prepare'?135000:15000});
     if(path==='password') {
       const result=response as {jwt?:string};if(result.jwt)saveSession(result.jwt);
